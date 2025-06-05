@@ -1,0 +1,36 @@
+id: ft8_encoder
+label: FT8 Encoder
+category: '[FT8]'
+
+templates:
+  imports: from gnuradio import ft8
+  make: ft8.encoder(${message})
+
+parameters:
+- id: message
+  label: Message
+  dtype: string
+  default: 'CQ DX VE4ABC EN19'
+  hide: none
+
+# No inputs since gr::io_signature::make(0, 0, 0)
+inputs: []
+
+outputs:
+- label: out
+  domain: stream
+  dtype: float
+
+documentation: |-
+  FT8 Encoder Block
+  
+  Encodes an FT8 message into a signal suitable for transmission.
+  
+  Parameters:
+    message: The FT8 message to encode (e.g., "CQ DX VE4ABC EN19")
+             Format: [CQ/QRZ/DE] [DX/callsign] [callsign] [grid square]
+  
+  Output:
+    Float samples representing the encoded FT8 signal
+
+file_format: 1
