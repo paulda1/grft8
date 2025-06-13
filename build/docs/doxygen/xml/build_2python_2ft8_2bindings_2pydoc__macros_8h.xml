@@ -2,6 +2,19 @@
 <doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.8.17">
   <compounddef id="build_2python_2ft8_2bindings_2pydoc__macros_8h" kind="file" language="C++">
     <compoundname>build/python/ft8/bindings/pydoc_macros.h</compoundname>
+    <includedby refid="encoder__pydoc_8h" local="yes">encoder_pydoc.h</includedby>
+    <invincdepgraph>
+      <node id="2">
+        <label>encoder_pydoc.h</label>
+        <link refid="encoder__pydoc_8h"/>
+      </node>
+      <node id="1">
+        <label>pydoc_macros.h</label>
+        <link refid="build_2python_2ft8_2bindings_2pydoc__macros_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+    </invincdepgraph>
       <sectiondef kind="define">
       <memberdef kind="define" id="build_2python_2ft8_2bindings_2pydoc__macros_8h_1afa7cf06549cf7fd295f622ef6f376357" prot="public" static="no">
         <name>__EXPAND</name>

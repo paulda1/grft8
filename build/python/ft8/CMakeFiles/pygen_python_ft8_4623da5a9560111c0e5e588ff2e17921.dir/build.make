@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake
+CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake
 
 # The command to remove a file.
-RM = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E rm -f
+RM = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -70,7 +70,7 @@ python/ft8/CMakeFiles/pygen_python_ft8_4623da5a9560111c0e5e588ff2e17921: python/
 
 python/ft8/__init__.pyc: /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/python/ft8/__init__.py
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Generating __init__.pyc"
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8 && /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/python /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python_compile_helper.py /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/python/ft8/__init__.py /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/__init__.pyc
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8 && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/python /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python_compile_helper.py /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/python/ft8/__init__.py /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/__init__.pyc
 
 python/ft8/CMakeFiles/pygen_python_ft8_4623da5a9560111c0e5e588ff2e17921.dir/codegen:
 .PHONY : python/ft8/CMakeFiles/pygen_python_ft8_4623da5a9560111c0e5e588ff2e17921.dir/codegen

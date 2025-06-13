@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake
+CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake
 
 # The command to remove a file.
-RM = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E rm -f
+RM = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -67,7 +67,7 @@ include python/ft8/CMakeFiles/copy_module_for_tests.dir/compiler_depend.make
 include python/ft8/CMakeFiles/copy_module_for_tests.dir/progress.make
 
 python/ft8/CMakeFiles/copy_module_for_tests:
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8 && /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E copy_directory /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/python/ft8 /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/test_modules/gnuradio/ft8/
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8 && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E copy_directory /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/python/ft8 /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/test_modules/gnuradio/ft8/
 
 python/ft8/CMakeFiles/copy_module_for_tests.dir/codegen:
 .PHONY : python/ft8/CMakeFiles/copy_module_for_tests.dir/codegen

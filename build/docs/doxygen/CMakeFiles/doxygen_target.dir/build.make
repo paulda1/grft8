@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake
+CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake
 
 # The command to remove a file.
-RM = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E rm -f
+RM = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =

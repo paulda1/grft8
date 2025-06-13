@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake
+CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake
 
 # The command to remove a file.
-RM = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E rm -f
+RM = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -76,15 +76,15 @@ lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o: lib/CMakeFiles/gnuradio-ft8.d
 lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o: /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc
 lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o: lib/CMakeFiles/gnuradio-ft8.dir/compiler_depend.ts
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o"
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o -MF CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o.d -o CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o -c /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/x86_64-conda-linux-gnu-c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o -MF CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o.d -o CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o -c /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc
 
 lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.i"
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc > CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.i
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/x86_64-conda-linux-gnu-c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc > CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.i
 
 lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.s"
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc -o CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.s
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/x86_64-conda-linux-gnu-c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/lib/encoder_impl.cc -o CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.s
 
 # Object files for target gnuradio-ft8
 gnuradio__ft8_OBJECTS = \
@@ -95,14 +95,14 @@ gnuradio__ft8_EXTERNAL_OBJECTS =
 
 lib/libgnuradio-ft8.so.1.0.0.0: lib/CMakeFiles/gnuradio-ft8.dir/encoder_impl.cc.o
 lib/libgnuradio-ft8.so.1.0.0.0: lib/CMakeFiles/gnuradio-ft8.dir/build.make
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libgnuradio-runtime.so.3.10.11.0
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libgnuradio-pmt.so.3.10.11.0
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libvolk.so.3.1.2
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libboost_thread.so.1.84.0
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libspdlog.so.1.14.1
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libfmt.so.11.0.2
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libgmpxx.so
-lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-clean/lib/libgmp.so
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libgnuradio-runtime.so.3.10.12.0
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libgnuradio-pmt.so.3.10.12.0
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libvolk.so.3.2.0
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libboost_thread.so.1.86.0
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libspdlog.so.1.15.1
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libfmt.so.11.0.2
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libgmpxx.so
+lib/libgnuradio-ft8.so.1.0.0.0: /home/danie/miniconda3/envs/gnuradio-ft8-py311/lib/libgmp.so
 lib/libgnuradio-ft8.so.1.0.0.0: lib/CMakeFiles/gnuradio-ft8.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX shared library libgnuradio-ft8.so"
 	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/lib && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gnuradio-ft8.dir/link.txt --verbose=$(VERBOSE)

@@ -44,10 +44,10 @@ cmake_force:
 SHELL = /bin/sh
 
 # The CMake executable.
-CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake
+CMAKE_COMMAND = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake
 
 # The command to remove a file.
-RM = /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/cmake -E rm -f
+RM = /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/cmake -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
@@ -70,7 +70,7 @@ python/ft8/bindings/CMakeFiles/extracted_docstrings: python/ft8/bindings/extract
 
 python/ft8/bindings/extracted_docstrings.json: lib/libgnuradio-ft8.so.1.0.0.0
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --blue --bold --progress-dir=/mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Scraping generated documentation for docstrings ..."
-	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/bindings && /home/danie/miniconda3/envs/gnuradio-ft8-clean/bin/python /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/docs/doxygen/update_pydoc.py scrape --xml_path /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/docs/doxygen/xml --json_path /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/bindings/extracted_docstrings.json
+	cd /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/bindings && /home/danie/miniconda3/envs/gnuradio-ft8-py311/bin/python /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/docs/doxygen/update_pydoc.py scrape --xml_path /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/docs/doxygen/xml --json_path /mnt/c/Users/danie/Documents/gr-ft8/gr-ft8/build/python/ft8/bindings/extracted_docstrings.json
 
 python/ft8/bindings/CMakeFiles/extracted_docstrings.dir/codegen:
 .PHONY : python/ft8/bindings/CMakeFiles/extracted_docstrings.dir/codegen
