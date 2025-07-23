@@ -1,0 +1,91 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - '**'  # Matches all branches
+  pull_request:
+    branches:
+      - '**'  # Matches all branches
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          libboost-all-dev \
+          python3-dev \
+          python3-pip \
+          gnuradio-dev \
+          doxygen \
+          pkg-config
+
+    - name: Setup Python environment
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install pybind11 numpy mako
+
+    - name: Configure CMake
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DPYTHON_EXECUTABLE=$(which python3)
+
+    - name: Build project
+      run: |
+        cd build
+        make -j2
+
+    - name: Run unit tests
+      run: |
+        cd build
+        cp ../lib/*.dat lib/
+        ctest --output-on-failure
+
+  build-matrix:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          cmake \
+          build-essential \
+          libboost-all-dev \
+          python3-dev \
+          python3-pip \
+          gnuradio-dev \
+          doxygen \
+          pkg-config
+
+    - name: Configure and build
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+
+    - name: Run tests
+      run: |
+        cd build
+        # Copy data files to test directory
+        cp ../lib/*.dat lib/
+        ctest --output-on-failure

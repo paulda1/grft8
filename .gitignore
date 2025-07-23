@@ -6,9 +6,45 @@ __pycache__/
 # C extensions
 *.so
 
+# CMake specific
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+Makefile
+
+# C++ compiled files
+*.o
+*.obj
+*.gch
+*.pch
+*.lai
+*.la
+*.a
+*.lib
+*.exe
+*.out
+*.app
+*.dylib
+*.dll
+
+# GNU Radio specific
+*.grc~
+*.grc.bak
+
+# Doxygen documentation
+docs/html/
+docs/latex/
+docs/xml/
+html/
+latex/
+
 # Distribution / packaging
 .Python
-build/
 develop-eggs/
 dist/
 downloads/
@@ -21,6 +57,11 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+
+# Python build artifacts (but preserve source lib/ directory)
+build/
+build/lib/
+build/lib.*/
 
 # Installer logs
 pip-log.txt
@@ -83,4 +124,33 @@ Thumbs.db
 
 # GitHub Copilot
 copilot.json
-build/
+.vscode/
+
+# Local development files
+*.local
+*.env
+*.bak
+*.tmp
+*.temp
+*.log
+*.cache
+*.pid
+*.pid.lock
+*.lock
+*.sqlite3
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
+
+# Temporary files
+*.tmp
+*.temp
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Cython
+*.so
+

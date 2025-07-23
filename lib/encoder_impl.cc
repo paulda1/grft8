@@ -36,13 +36,13 @@ namespace gr {
 
     encoder_impl::~encoder_impl(){}
 
-    message::message_type 
+    message::message_type
     encoder_impl::get_message_type()
     {
         return d_message_obj.message_type_detection();
     }
 
-    const std::string& 
+    const std::string&
     encoder_impl::get_processed_message()
     {
         return d_message_obj.get_message();
@@ -69,32 +69,32 @@ namespace gr {
       return fsk_signal;
     }
 
-    void 
+    void
     encoder_impl::generate_waveform()
     {
         try {
             d_logger->info("Starting waveform generation...");
-            
+
             ft8_encoder encoder;
             std::bitset<77> message_bits = encoder.encode_standard(d_message_obj);
             d_logger->info("Message bits: {}", message_bits.to_string());
-            
+
             std::bitset<91> crc = encoder.calc_crc(message_bits);
             d_logger->info("CRC bits: {}", crc.to_string());
-            
+
             std::bitset<174> ldpc = encoder.apply_ldpc(crc);
             std::vector<int> symbols = encoder.bits_to_fsk8(ldpc);
             d_logger->info("Generated {} symbols", symbols.size());
-            
+
             std::vector<float> rectangular_fsk = generate_rectangular_fsk(symbols);
             d_logger->info("Rectangular FSK size: {}", rectangular_fsk.size());
-            
+
             // Check if waveform has actual values
             if (!d_waveform.empty()) {
                 auto minmax = std::minmax_element(d_waveform.begin(), d_waveform.end());
                 d_logger->info("Waveform range: {} to {}", *minmax.first, *minmax.second);
             }
-            
+
             d_waveform_generated = true;
         } catch (const std::exception& e) {
             d_logger->error("Exception in generate_waveform: {}", e.what());
@@ -114,7 +114,7 @@ namespace gr {
       }
 
       int to_output = 0;
-      
+
       for(int i = 0; i<noutput_items; ++i) {
         if (d_sample_idx < d_waveform.size()){
             out[i] = d_waveform[d_sample_idx];
