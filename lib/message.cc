@@ -11,6 +11,29 @@
 #include <regex>
 #include <sstream>
 
+//from original doc's .txt list
+const std::vector<std::string> message::sections = { 
+  "AB", "AK", "AL", "AR", "AZ", "BC", "CO", "CT", "DE", "EB",
+  "EMA", "ENY", "EPA", "EWA", "GA", "GTA", "IA", "ID", "IL", "IN",
+  "KS", "KY", "LA", "LAX", "MAR", "MB", "MDC", "ME", "MI", "MN",
+  "MO", "MS", "MT", "NC", "ND", "NE", "NFL", "NH", "NL", "NLI",
+  "NM", "NNJ", "NNY", "NT", "NTX", "NV", "OH", "OK", "ONE", "ONN",
+  "ONS", "OR", "ORG", "PAC", "PR", "QC", "RI", "SB", "SC", "SCV",
+  "SD", "SDG", "SF", "SFL", "SJV", "SK", "SNJ", "STX", "SV", "TN",
+  "UT", "VA", "VI", "VT", "WCF", "WI", "WMA", "WNY", "WPA", "WTX",
+  "WV", "WWA", "WY", "DX"
+};
+
+const std::vector<std::string> message::states_provinces = {
+    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+    "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+    "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+    "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+    "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+    "NB", "NS", "QC", "ON", "MB", "SK", "AB", "BC", "NWT", "NF",
+    "LB", "NU", "YT", "PEI", "DC"
+};
+
 message::message () : d_logger ("FT8_message")
 {
   d_logger.info ("Message object constructed");
@@ -73,7 +96,6 @@ message::character_validation ()
 {
   size_t i = 0;
   bool last_was_space = false;
-  bool last_was_slash = false;
   for (size_t j = 0; j < d_message.length (); ++j)
     {
       char c = d_message[j];
@@ -101,7 +123,6 @@ message::character_validation ()
 
 message::message_type
 message::message_type_detection () const
-// Keyword detection
 {
   std::istringstream stream (d_message);
   std::string input;
@@ -114,22 +135,115 @@ message::message_type_detection () const
       total_chars += input.length ();
     }
 
-  message_type current_type = message_type::unknown;
+  d_parsed_data = ParsedData{};
+  
+  // Parse all tokens and populate d_parsed_data
+  for (const auto &keyword : keywords)
+    {
+      if (keyword == "DE")
+        {
+          d_parsed_data.has_de = true;
+        }
+      else if (keyword == "QRZ")
+        {
+          d_parsed_data.has_qrz = true;
+        }
+      else if (keyword == "CQ")
+        {
+          d_parsed_data.has_cq = true;
+        }
+      else if (keyword == "R")
+        {
+          d_parsed_data.has_R = true;
+        }
+      else if (keyword == "RRR")
+        {
+          d_parsed_data.has_rrr = true;
+        }
+      else if (keyword == "RR73")
+        {
+          d_parsed_data.has_rr73 = true;
+        }
+      else if (keyword == "73")
+        {
+          d_parsed_data.has_73 = true;
+        }
+      else if (keyword == "TU")
+      {
+        d_parsed_data.has_tu = true;
+      }
+      else if (is_callsign(keyword))
+        {
+          d_parsed_data.callsigns.push_back(keyword);
+        }
+      else if (is_grid_square(keyword))
+        {
+          d_parsed_data.grid_squares.push_back(keyword);
+        }
+      else if (is_signal_report(keyword))
+        {
+          d_parsed_data.signal_report = keyword;
+        }
+      else if (is_contest_report(keyword)) 
+        {
+            d_parsed_data.contest_report = keyword;
+        }
+      else if (is_field_day_class(keyword))
+        {
+          d_parsed_data.field_day_class = keyword;
+        }
+      else if (is_arrl_section(keyword))
+        {
+          d_parsed_data.arrl_section = get_arrl_section_idx(keyword);
+        }
+      else if (is_state_province(keyword))
+        {
+            d_parsed_data.contest_info = keyword;
+            d_parsed_data.states_provinces = get_state_province_idx(keyword); 
+        }
+      else if (std::regex_match(keyword, std::regex(R"(\d{1,3})")))
+        {
+          d_parsed_data.cq_modifiers.push_back(keyword);
+        }
+      else if (std::regex_match(keyword, std::regex(R"([A-Z]{1,4})")))
+        {
+          d_parsed_data.cq_modifiers.push_back(keyword);
+        }
+      else if (std::regex_match(keyword, std::regex(R"(\d{1,4})"))) 
+        {
+            d_parsed_data.contest_info = keyword;
+        }
+      else if (keyword.find("/R") != std::string::npos)
+        {
+          d_parsed_data.has_r = true;
+        }
+      else if (keyword.find("/P") != std::string::npos)
+        {
+          d_parsed_data.has_p = true;
+        }
+      else if (is_hex(keyword) && keywords.size() == 1)
+        {
+          d_parsed_data.telemetry_hex = keyword;
+        }
+    }
 
-  // if (keyword == "CQ" || keyword == "DE" || keyword == "QRZ"){}
-  //***Standard and euvhf regular seem the same!! ***
+  // If no structured data found and short enough, treat as free text
+  if (d_parsed_data.callsigns.empty() && d_parsed_data.grid_squares.empty() && 
+      !d_parsed_data.has_cq && total_chars <= 13)
+    {
+      d_parsed_data.free_text = d_message;
+    }
+
+  // Now determine message type based on parsed data
+  message_type current_type = message_type::unknown;
 
   if (is_dxpedition (keywords))
     {
       current_type = message_type::dxpedition;
     }
-  else if (is_telemetry (keywords))
+  else if (!d_parsed_data.telemetry_hex.empty())
     {
       current_type = message_type::telemetry;
-    }
-  else if (is_field_day (keywords, true))
-    { // more restricted due to R, so check first
-      current_type = message_type::field_dayx;
     }
   else if (is_field_day (keywords, false))
     {
@@ -151,12 +265,28 @@ message::message_type_detection () const
     {
       current_type = message_type::nonstd_call;
     }
-  else if (total_chars <= 13)
+  else if (!d_parsed_data.free_text.empty())
     {
       current_type = message_type::free_text;
     }
 
   return current_type;
+}
+
+bool
+message::is_arrl_section(const std::string &keyword) const
+{
+  return std::find(message::sections.begin(), message::sections.end(), keyword) != message::sections.end();
+}
+
+int
+message::get_arrl_section_idx(const std::string &keyword) const
+{
+  auto val = std::find(message::sections.begin(), message::sections.end(), keyword);
+  if (val != sections.end()) {
+    return std::distance(message::sections.begin(), val);
+  }
+  return -1; // Not found
 }
 
 bool
@@ -194,23 +324,53 @@ message::is_euvhfx (const std::vector<std::string> &keywords) const
 }
 
 bool
-message::is_rtty_ru (const std::vector<std::string> &keywords) const
+message::is_contest_report(const std::string &keyword) const
 {
-  bool has_callsigns = false;
-  bool has_contest = false;
+    if (keyword.length() == 2) {
+        std::regex two_digit(R"(^5[2-9]$)");
+        return std::regex_match(keyword, two_digit);
+    } else if (keyword.length() == 3) {
+        std::regex three_digit(R"(^5[2-9]9$)");
+        return std::regex_match(keyword, three_digit);
+    }
+    return false;
+}
 
-  for (const auto &keyword : keywords)
+bool
+message::is_state_province(const std::string &keyword) const
+{
+    return std::find(states_provinces.begin(), states_provinces.end(), keyword) != states_provinces.end();
+}
+
+int
+message::get_state_province_idx(const std::string &keyword) const
+{
+    auto it = std::find(states_provinces.begin(), states_provinces.end(), keyword);
+    if (it != states_provinces.end()) {
+        return std::distance(states_provinces.begin(), it);
+    }
+    return -1;
+}
+
+bool
+message::is_rtty_ru(const std::vector<std::string> &keywords) const
+{
+    bool has_callsigns = false;
+    bool has_contest_data = false;
+
+    for (const auto &keyword : keywords)
     {
-      if (is_callsign (keyword))
+        if (is_callsign(keyword))
         {
-          has_callsigns = true;
+            has_callsigns = true;
         }
-      else if (is_contest (keyword))
+        else if (is_contest_report(keyword) || is_state_province(keyword) || 
+                 std::regex_match(keyword, std::regex(R"(\d{1,4})")))
         {
-          has_contest = true;
+            has_contest_data = true;
         }
     }
-  return has_callsigns && has_contest;
+    return has_callsigns && has_contest_data;
 }
 
 bool

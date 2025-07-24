@@ -89,6 +89,8 @@ namespace gr {
             std::vector<float> rectangular_fsk = generate_rectangular_fsk(symbols);
             d_logger->info("Rectangular FSK size: {}", rectangular_fsk.size());
             
+            d_waveform = rectangular_fsk;
+            
             // Check if waveform has actual values
             if (!d_waveform.empty()) {
                 auto minmax = std::minmax_element(d_waveform.begin(), d_waveform.end());
