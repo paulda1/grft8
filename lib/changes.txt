@@ -1,0 +1,4 @@
+- update message_prod_impl to be title that's to be used as the block name in the future
+- also change "FT8_message_processing" block name and "decoder" to be appropriate block names
+- go through with clang-format again making sure all indentataion, spacing is taken care of
+- remove old commented out code, add comments/write up documentation

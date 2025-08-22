@@ -23,10 +23,6 @@ namespace gr {
       return gnuradio::make_block_sptr<message_prod_impl>();
     }
 
-
-    /*
-     * The private constructor
-     */
     message_prod_impl::message_prod_impl()
       : gr::block("FT8_message_processing",
               gr::io_signature::make(0, 0, 0),
@@ -42,11 +38,31 @@ namespace gr {
     message_prod_impl::~message_prod_impl()
     {
     }
+
+    float 
+    message_prod_impl::generate_gaussian_pulse_taps(float t) 
+    {
+        float pulse;
+        
+        // Gaussian pulse equation: p(t) = (1/2T) * [erf(kBT(t+0.5)/T) - erf(kBT(t-0.5)/T)]
+        float k = M_PI * std::sqrt(2.0f / std::log(2.0f));
+        float bt = 2.0f;
+        float erf_coeff = k * bt;
+        float T = 0.160f;
+        float norm = 1.0f / (2.0f * T); 
+
+        float erf_plus = std::erf(erf_coeff * (t/T + 0.5f));
+        float erf_minus = std::erf(erf_coeff * (t/T - 0.5f));
+        pulse = norm * (erf_plus - erf_minus);
+        
+        return pulse;
+    }
+
     std::vector<float> 
     message_prod_impl::fsk_tones(std::vector<int> symbols)
     {
       const int sample_rate = 48000;
-      const float baud_rate = 6.25f;
+      const float baud_rate = 6.25f; //79*0.160
       const float freq_shift = 6.25f;
       const float carrier_frequency = 1500.0f;
       const float amplitude = 1.0f;
@@ -62,20 +78,18 @@ namespace gr {
       std::vector<float> fsk_signal;
       fsk_signal.reserve(expected_size);
       
-      float phase = 0.0f;
+
 
       for (size_t i = 0; i < symbols.size(); ++i) {
-        float h = 1.0f;
-        float freq_deviation = h*symbols[i] * freq_shift;
-
-        d_logger->info("Symbol {}: value={}, freq={} Hz", i, symbols[i], freq_deviation);
-
-        for (int j = 0; j < samples_per_symbol; ++j) {
-          phase +=  2 *M_PI * (carrier_frequency + freq_deviation) / sample_rate;
-          fsk_signal.push_back(amplitude*std::cos(phase));        
+        float symbol_frequency = carrier_frequency + static_cast<float>(symbols[i])*freq_shift;
+        for (auto j = 0; j < samples_per_symbol; ++j){
+          int sample_index = i * samples_per_symbol + j;
+          float t = static_cast<float>(sample_index) / sample_rate;
+          fsk_signal.push_back(amplitude*std::cos(2*M_PI*symbol_frequency*t + generate_gaussian_pulse_taps(t)));
         }
       }
-      
+
+      //phase += h*symbols[i]/period;
       d_logger->info("Generated FSK signal: {} samples (expected {})", 
                      fsk_signal.size(), expected_size);
       
@@ -116,16 +130,9 @@ namespace gr {
           symbol_str += std::to_string(symbols[i]);
         }
         d_logger->info("Generated symbols: {}", symbol_str);
-
-        float gaussian_bt = 2.0f;
-        int sample_rate = 48000;
-        float baud_rate = 6.25f;
-        int samples_per_symbol = static_cast<int>(sample_rate/baud_rate);
-
+        
         std::vector<float> fsk_tone_vals;
         fsk_tone_vals = fsk_tones(symbols);
-
-        // std::vector<float> shaped_signal = convolve(fsk_tone_vals, fsk_pulse);
 
         pmt::pmt_t symbol_pmt = pmt::init_f32vector(fsk_tone_vals.size(), fsk_tone_vals.data());
 

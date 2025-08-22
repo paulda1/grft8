@@ -24,6 +24,8 @@ namespace gr {
 
       std::vector<float> fsk_tones(std::vector<int> symbols);
       void process_input(const pmt::pmt_t& msg);
+      float generate_gaussian_pulse_taps(float t);
+      std::vector<float> convolve(const std::vector<float>& signal, const std::vector<float>& filter);
     };
 
   } // namespace ft8

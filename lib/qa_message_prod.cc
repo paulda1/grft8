@@ -105,11 +105,37 @@ generate_gaussian_pulse_taps(int samples_per_symbol, float bt) {
     return pulse;
 }
 
+//to figure out what the time value ranging from 0 to 7680 does to erf function
+//also to ensure the standard erf function works as advertised
+// BOOST_AUTO_TEST_CASE(erf_test){ 
+//     //p(t) = (1/2T) * [erf(kBT(t+0.5)/T) - erf(kBT(t-0.5)/T)]
+//     int num_tests = 9;
+//     std::vector<float> vals_to_test(num_tests);
+
+//     vals_to_test = {0,0.25,0.5,1,5,10,100,1000,7000};
+//     float k = 5.366f;
+//     int bT = 2;
+//     float T = 0.160f;
+
+//     for (int i = 0; i<num_tests; ++i){ //make better printing
+//         float val_in = k*bT*(vals_to_test[i]/T+0.5);
+//         std::cout << "vals to test:" << std::endl;
+//         std::cout << vals_to_test[i] <<std::endl;
+//         std::cout << "val in:" << std::endl;
+//         std::cout << val_in << std::endl;
+//         std::cout << "erf val in" << std::endl;
+//         std::cout << std::erf(val_in) << std::endl;
+//         std::cout << "final value:" << std::endl;
+//         std::cout << 1/(2*T)*std::erf(val_in) << std::endl;
+//         std::cout << std::endl;
+//     }
+// }
+
 BOOST_AUTO_TEST_CASE(test_message_prod_basic)
 {
     auto tb = gr::make_top_block("test_ft8_message_prod");
 
-    pmt::pmt_t test_message = pmt::string_to_symbol("VE4ABCW9XYZER");
+    pmt::pmt_t test_message = pmt::string_to_symbol("QWEHIIMDANIEL");
 
     auto msg_strobe = gr::blocks::message_strobe::make(
         test_message, 
@@ -417,42 +443,42 @@ BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
 //     test_logger.debug("Various message types encoding test passed");
 // }
 
-// BOOST_AUTO_TEST_CASE(test_complete_waveform_generation_integration) {
-//     test_logger.info("Testing complete waveform generation with GNU Radio integration");
+BOOST_AUTO_TEST_CASE(test_complete_waveform_generation_integration) {
+    test_logger.info("Testing complete waveform generation with GNU Radio integration");
     
-//     std::string test_message = "CQ K1ABC FN42";
+    std::string test_message = "CQ K1ABC FN42";
     
-//     // Test if encoder can be created (this tests GNU Radio integration)
-//     try {
-//         auto encoder = gr::ft8::encoder::make(test_message);
-//         test_logger.info("Created GNU Radio encoder instance with message: {}", test_message);
-//         BOOST_CHECK(encoder != nullptr);
+    // Test if encoder can be created (this tests GNU Radio integration)
+    try {
+        auto encoder = gr::ft8::encoder::make(test_message);
+        test_logger.info("Created GNU Radio encoder instance with message: {}", test_message);
+        BOOST_CHECK(encoder != nullptr);
         
-//         test_logger.info("GNU Radio encoder integration test passed");
-//     } catch (const std::exception& e) {
-//         test_logger.error("GNU Radio encoder creation failed: {}", e.what());
-//         // If GNU Radio encoder is not available, fall back to basic test
-//         BOOST_WARN_MESSAGE(false, "GNU Radio encoder not available, skipping integration test");
-//     }
+        test_logger.info("GNU Radio encoder integration test passed");
+    } catch (const std::exception& e) {
+        test_logger.error("GNU Radio encoder creation failed: {}", e.what());
+        // If GNU Radio encoder is not available, fall back to basic test
+        BOOST_WARN_MESSAGE(false, "GNU Radio encoder not available, skipping integration test");
+    }
     
-//     // Test basic encoding chain without GNU Radio
-//     message msg(test_message);
-//     ft8_encoder encoder;
+    // Test basic encoding chain without GNU Radio
+    message msg(test_message);
+    ft8_encoder encoder;
     
-//     std::bitset<77> message_bits = encoder.encode_standard(msg);
-//     std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
-//     std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
-//     std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
+    std::bitset<77> message_bits = encoder.encode_standard(msg);
+    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
+    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
     
-//     BOOST_CHECK_EQUAL(symbols.size(), 79);
+    BOOST_CHECK_EQUAL(symbols.size(), 79);
     
-//     // Verify we have reasonable symbol values
-//     for (int symbol : symbols) {
-//         BOOST_CHECK(symbol >= 0 && symbol <= 7);
-//     }
+    // Verify we have reasonable symbol values
+    for (int symbol : symbols) {
+        BOOST_CHECK(symbol >= 0 && symbol <= 7);
+    }
     
-//     test_logger.info("Basic encoding chain test passed: {} symbols generated", symbols.size());
-// }
+    test_logger.info("Basic encoding chain test passed: {} symbols generated", symbols.size());
+}
 
 // BOOST_AUTO_TEST_CASE(test_callsign_parsing) {
 //     test_logger.info("Testing callsign parsing and validation");

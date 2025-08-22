@@ -15,6 +15,7 @@ list(APPEND ft8_sources
     message.cc
     ft8_encoder.cc
     message_prod_impl.cc
+    decoder_impl.cc
 )
 
 set(ft8_sources
@@ -66,6 +67,7 @@ include(GrTest)
 #include_directories()
 # List all files that contain Boost.UTF unit tests here
 list(APPEND test_ft8_sources
+
      qa_message_prod.cc
 )
 # Anything we need to link to for the unit tests go here
