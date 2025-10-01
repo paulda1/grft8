@@ -1,3 +1,5 @@
+- Fix the ReadMe make if official with the languages, proper markdown to note how far things have progressed, 
+the general structure of everything that exists right now, the changes to be made, and the decisions made for how things were processed the way they are
 - update message_prod_impl to be title that's to be used as the block name in the future
 - also change "FT8_message_processing" block name and "decoder" to be appropriate block names
 - go through with clang-format again making sure all indentataion, spacing is taken care of

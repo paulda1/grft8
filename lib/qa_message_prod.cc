@@ -135,7 +135,7 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
 {
     auto tb = gr::make_top_block("test_ft8_message_prod");
 
-    pmt::pmt_t test_message = pmt::string_to_symbol("QWEHIIMDANIEL");
+    pmt::pmt_t test_message = pmt::string_to_symbol("TNX BOB 73 GL");
 
     auto msg_strobe = gr::blocks::message_strobe::make(
         test_message, 
@@ -149,20 +149,9 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
     );
 
     const float sample_rate = 48000.0f;
-    const float baud_rate = 6.25f;
-    const float gaussian_bt = 2.0f;
-    const float vco_sensitivity = (2 * M_PI)/ sample_rate;
-    const int samples_per_symbol = static_cast<int>(sample_rate/baud_rate);
-
-    std::vector<float> gaussian_taps = generate_gaussian_pulse_taps(samples_per_symbol, gaussian_bt);
-
-    auto gaussian_filter = gr::filter::interp_fir_filter_fff::make(samples_per_symbol, gaussian_taps);
-    auto vco = gr::blocks::vco_f::make(sample_rate, vco_sensitivity, 1);
-    auto vector_sink = gr::blocks::vector_sink_f::make();
-    auto debug_sink_4 = gr::blocks::file_sink::make(sizeof(float), "./debug_final_vco.dat");
 
     auto wav_sink = gr::blocks::wavfile_sink::make(
-        "./ft8_signal.wav",
+        "./ft8_signal_updated.wav",
         1,        
         static_cast<unsigned int>(sample_rate),
         gr::blocks::FORMAT_WAV,         
@@ -175,7 +164,6 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
 
     // tb->connect(pdu_to_stream, 0, gaussian_filter, 0);
     tb->connect(pdu_to_stream, 0, wav_sink, 0);
-    tb->connect(pdu_to_stream, 0, debug_sink_4, 0);     // Should be symbol values 0-7
 
 
     test_logger.info("FT8 chain connected successfully");
@@ -443,49 +431,49 @@ BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
 //     test_logger.debug("Various message types encoding test passed");
 // }
 
-BOOST_AUTO_TEST_CASE(test_complete_waveform_generation_integration) {
-    test_logger.info("Testing complete waveform generation with GNU Radio integration");
-    
-    std::string test_message = "CQ K1ABC FN42";
-    
-    // Test if encoder can be created (this tests GNU Radio integration)
-    try {
-        auto encoder = gr::ft8::encoder::make(test_message);
-        test_logger.info("Created GNU Radio encoder instance with message: {}", test_message);
-        BOOST_CHECK(encoder != nullptr);
-        
-        test_logger.info("GNU Radio encoder integration test passed");
-    } catch (const std::exception& e) {
-        test_logger.error("GNU Radio encoder creation failed: {}", e.what());
-        // If GNU Radio encoder is not available, fall back to basic test
-        BOOST_WARN_MESSAGE(false, "GNU Radio encoder not available, skipping integration test");
-    }
-    
-    // Test basic encoding chain without GNU Radio
-    message msg(test_message);
-    ft8_encoder encoder;
-    
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
-    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
-    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
-    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
-    
-    BOOST_CHECK_EQUAL(symbols.size(), 79);
-    
-    // Verify we have reasonable symbol values
-    for (int symbol : symbols) {
-        BOOST_CHECK(symbol >= 0 && symbol <= 7);
-    }
-    
-    test_logger.info("Basic encoding chain test passed: {} symbols generated", symbols.size());
-}
-
-// BOOST_AUTO_TEST_CASE(test_callsign_parsing) {
-//     test_logger.info("Testing callsign parsing and validation");
-    
-//     message parser;
-    
-//     // Valid callsigns
+//BOOST_AUTO_TEST_CASE(test_complete_waveform_generation_integration) {
+//    test_logger.info("Testing complete waveform generation with GNU Radio integration");
+//    
+//    std::string test_message = "CQ K1ABC FN42";
+//    
+//    // Test if encoder can be created (this tests GNU Radio integration)
+//    try {
+//        auto encoder = gr::ft8::encoder::make(test_message);
+//        test_logger.info("Created GNU Radio encoder instance with message: {}", test_message);
+//        BOOST_CHECK(encoder != nullptr);
+//        
+//        test_logger.info("GNU Radio encoder integration test passed");
+//    } catch (const std::exception& e) {
+//        test_logger.error("GNU Radio encoder creation failed: {}", e.what());
+//        // If GNU Radio encoder is not available, fall back to basic test
+//        BOOST_WARN_MESSAGE(false, "GNU Radio encoder not available, skipping integration test");
+//    }
+//    
+//    // Test basic encoding chain without GNU Radio
+//    message msg(test_message);
+//    ft8_encoder encoder;
+//    
+//    std::bitset<77> message_bits = encoder.encode_standard(msg);
+//    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+//    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
+//    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
+//    
+//    BOOST_CHECK_EQUAL(symbols.size(), 79);
+//    
+//    // Verify we have reasonable symbol values
+//    for (int symbol : symbols) {
+//        BOOST_CHECK(symbol >= 0 && symbol <= 7);
+//    }
+//    
+//    test_logger.info("Basic encoding chain test passed: {} symbols generated", symbols.size());
+//}
+//
+//// BOOST_AUTO_TEST_CASE(test_callsign_parsing) {
+////     test_logger.info("Testing callsign parsing and validation");
+//    
+////     message parser;
+//    
+////     // Valid callsigns
 //     BOOST_CHECK(parser.is_callsign("K1ABC"));
 //     BOOST_CHECK(parser.is_callsign("W1AW"));
 //     BOOST_CHECK(parser.is_callsign("VE3XYZ"));

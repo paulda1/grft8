@@ -1,87 +1,16 @@
-#include <gnuradio/hier_block2.h>
-#include <gnuradio/io_signature.h>
-#include <gnuradio/block.h>
 #include <gnuradio/top_block.h>
 #include <gnuradio/logger.h>
-#include <gnuradio/ft8/message_prod.h>
-#include <gnuradio/blocks/message_strobe.h>
+#include <gnuradio/ft8/decoder.h>
 #include <gnuradio/blocks/message_debug.h>
-#include <gnuradio/blocks/multiply_const.h>
-#include <gnuradio/blocks/add_const_ff.h>
-#include <gnuradio/blocks/vector_source.h>
-#include <gnuradio/blocks/vector_sink.h>
-#include <gnuradio/blocks/file_sink.h>
-#include <gnuradio/blocks/vco_f.h>
-#include <gnuradio/blocks/repeat.h>
-#include <gnuradio/blocks/wavfile_sink.h>
-#include <gnuradio/filter/interp_fir_filter.h>
-#include <gnuradio/pdu/pdu_to_stream.h>
-#include <boost/test/unit_test.hpp>
-#include <fstream>
-#include <filesystem>
-#include <sys/stat.h>
-#include <pmt/pmt.h>
-#include <chrono>
-#include <thread>
-#include <iostream>
-#include <algorithm>
-#include <cmath>
+#include <gnuradio/blocks/wavfile_source.h>
 
 //*todo: remember to move this function somewhere else:
-static gr::logger d_logger("FT8_QA");
-
-std::vector<float> generate_gaussian_pulse_taps(int samples_per_symbol, float bt) {
-    int pulse_len = 3 * samples_per_symbol;
-    std::vector<float> pulse(pulse_len);
-    
-    // Gaussian pulse equation: p(t) = (1/2T) * [erf(kBT(t+0.5)/T) - erf(kBT(t-0.5)/T)]
-    float k = M_PI *std::sqrt(2.0f / std::log(2.0f));
-    float erf_coeff = k * bt;
-    float T = 0.160;
-    float norm = 1/(2*T); 
-
-    for (int i = 0; i < pulse_len; ++i) {
-        float t = (i - pulse_len/2.0f)/samples_per_symbol; //center it
-        float erf_plus = std::erf(erf_coeff * (t/T + 0.5f));
-        float erf_minus = std::erf(erf_coeff * (t/T - 0.5f));
-        pulse[i] = norm * (erf_plus - erf_minus);
-    }
-    
-    return pulse;
-}
-
+static gr::logger d_logger("FT8_QA_NEW");
 
 BOOST_AUTO_TEST_CASE(test_message_prod_basic)
 {
-    auto tb = gr::make_top_block("test_ft8_message_prod");
 
-    pmt::pmt_t test_message = pmt::string_to_symbol("VE4ABCW9XYZER");
-
-    auto msg_strobe = gr::blocks::message_strobe::make(
-        test_message, 
-        10000
-    );
-    //https://wiki.gnuradio.org/index.php/Packet_Communications
-    auto msg_processor = gr::ft8::message_prod::make();
-    // auto msg_debug = gr::blocks::message_debug::make();
-    auto pdu_to_stream = gr::pdu::pdu_to_stream_f::make(
-        gr::pdu::EARLY_BURST_APPEND      
-    );
-
-    const float sample_rate = 48000.0f;
-    const float baud_rate = 6.25f;
-    const float gaussian_bt = 2.0f;
-    const float vco_sensitivity = (2 * M_PI)/ sample_rate;
-    const int samples_per_symbol = static_cast<int>(sample_rate/baud_rate);
-
-    std::vector<float> gaussian_taps = generate_gaussian_pulse_taps(samples_per_symbol, gaussian_bt);
-
-    auto gaussian_filter = gr::filter::interp_fir_filter_fff::make(samples_per_symbol, gaussian_taps);
-    auto vco = gr::blocks::vco_f::make(sample_rate, vco_sensitivity, 1);
-    auto vector_sink = gr::blocks::vector_sink_f::make();
-    auto debug_sink_4 = gr::blocks::file_sink::make(sizeof(float), "./debug_final_vco.dat");
-
-    auto wav_sink = gr::blocks::wavfile_sink::make(
+    auto wav_source = gr::blocks::wavfile_source::make(
         "./ft8_signal.wav",
         1,        
         static_cast<unsigned int>(sample_rate),
@@ -90,16 +19,11 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
         false                                  // append (false = overwrite)
     );
 
-    tb->msg_connect(msg_strobe, "strobe", msg_processor, "Input");
-    tb->msg_connect(msg_processor, "Output", pdu_to_stream, "pdus");
-
-    tb->connect(pdu_to_stream, 0, gaussian_filter, 0);
-    tb->connect(gaussian_filter, 0, vco, 0);
-    tb->connect(vco, 0, wav_sink, 0);
-    tb->connect(vco, 0, debug_sink_4, 0);     // Should be symbol values 0-7
+    auto audio_processor = gr::ft8::decoder::make();
+    tb->connect(wav_source, 0, audio_processor, 0);     // Should be symbol values 0-7
 
 
-    d_logger.info("FT8 chain connected successfully");
+    d_logger.info("FT8 signal connected successfully");
 
     tb->start();
     std::this_thread::sleep_for(std::chrono::seconds(15));
@@ -108,6 +32,64 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
     d_logger.info("Flowgraph executed successfully");
 
 }
+
+// BOOST_AUTO_TEST_CASE(test_message_prod_basic)
+// {
+//     auto tb = gr::make_top_block("test_ft8_message_prod");
+
+//     pmt::pmt_t test_message = pmt::string_to_symbol("VE4ABCW9XYZER");
+
+//     auto msg_strobe = gr::blocks::message_strobe::make(
+//         test_message, 
+//         10000
+//     );
+//     //https://wiki.gnuradio.org/index.php/Packet_Communications
+//     auto msg_processor = gr::ft8::message_prod::make();
+//     // auto msg_debug = gr::blocks::message_debug::make();
+//     auto pdu_to_stream = gr::pdu::pdu_to_stream_f::make(
+//         gr::pdu::EARLY_BURST_APPEND      
+//     );
+
+//     const float sample_rate = 48000.0f;
+//     const float baud_rate = 6.25f;
+//     const float gaussian_bt = 2.0f;
+//     const float vco_sensitivity = (2 * M_PI)/ sample_rate;
+//     const int samples_per_symbol = static_cast<int>(sample_rate/baud_rate);
+
+//     std::vector<float> gaussian_taps = generate_gaussian_pulse_taps(samples_per_symbol, gaussian_bt);
+
+//     auto gaussian_filter = gr::filter::interp_fir_filter_fff::make(samples_per_symbol, gaussian_taps);
+//     auto vco = gr::blocks::vco_f::make(sample_rate, vco_sensitivity, 1);
+//     auto vector_sink = gr::blocks::vector_sink_f::make();
+//     auto debug_sink_4 = gr::blocks::file_sink::make(sizeof(float), "./debug_final_vco.dat");
+
+//     auto wav_sink = gr::blocks::wavfile_sink::make(
+//         "./ft8_signal.wav",
+//         1,        
+//         static_cast<unsigned int>(sample_rate),
+//         gr::blocks::FORMAT_WAV,         
+//         gr::blocks::FORMAT_PCM_16,          
+//         false                                  // append (false = overwrite)
+//     );
+
+//     tb->msg_connect(msg_strobe, "strobe", msg_processor, "Input");
+//     tb->msg_connect(msg_processor, "Output", pdu_to_stream, "pdus");
+
+//     tb->connect(pdu_to_stream, 0, gaussian_filter, 0);
+//     tb->connect(gaussian_filter, 0, vco, 0);
+//     tb->connect(vco, 0, wav_sink, 0);
+//     tb->connect(vco, 0, debug_sink_4, 0);     // Should be symbol values 0-7
+
+
+//     d_logger.info("FT8 chain connected successfully");
+
+//     tb->start();
+//     std::this_thread::sleep_for(std::chrono::seconds(15));
+//     tb->stop();
+//     tb->wait();
+//     d_logger.info("Flowgraph executed successfully");
+
+// }
     // const float freq_shift = 6.25f; 
 
     // auto add_base_freq = gr::blocks::add_const_ff::make(base_freq);

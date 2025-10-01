@@ -16,7 +16,7 @@
 #include <sstream>
 #include <string_view>
 
-ft8_encoder::ft8_encoder() : d_logger("FT8_encoding") {
+ft8_encoder::ft8_encoder() : d_logger("ft8 encoding") {
     d_logger.info("Message encoding created");
 }
 ft8_encoder::ft8_encoder(const message& message) : d_logger("FT8_encoding") {
@@ -206,8 +206,8 @@ std::bitset<91> ft8_encoder::calc_crc(const std::bitset<77>& message_bits) {
     for (size_t i = 0; i < 77; ++i) {
         complete_msg[i] = message_bits[i];
     }
-    for (size_t i = 0; i < 13; ++i) {
-        complete_msg[77 + i] = (crc_register >> (13 - i)) & 1; // move to msp + mask w/ 1
+    for (size_t i = 0; i < 14; ++i) {
+        complete_msg[77 + i] = (crc_register >> (14 - i)) & 1; // move to msp + mask w/ 1
     }
 
     d_logger.info("91-bit FT8 msg with CRC14 created");
