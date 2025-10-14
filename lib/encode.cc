@@ -5,66 +5,64 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "ft8_encoder.h"
+#include "encode.h"
 #include "message.h"
 #include <bitset>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <cmath>
-#include <fstream>
 #include <gmpxx.h>
 #include <regex>
-#include <sstream>
 #include <string_view>
 
-ft8_encoder::ft8_encoder() : d_logger("ft8 encoding") {
+Encode::Encode() : d_logger("Encoding") {
     d_logger.info("Message encoding created");
 }
-ft8_encoder::ft8_encoder(const message& message) : d_logger("FT8_encoding") {
+Encode::Encode(const Message& message) : d_logger("Encoding") {
     d_logger.info("FT8 encoding object constructed");
     bitfields(message);
 }
 
-void ft8_encoder::bitfields(const message& message) {
-    message::message_type type = message.message_type_detection();
+void Encode::bitfields(const Message& message) {
+    Message::message_type type = message.message_type_detection();
 
     switch (type) {
-        case message::message_type::standard: // or euvhf
+        case Message::message_type::standard: // or euvhf
             encode_standard(message);
             break;
-        case message::message_type::dxpedition:
+        case Message::message_type::dxpedition:
             encode_dexpedition(message);
             break;
-        case message::message_type::field_day:
+        case Message::message_type::field_day:
             encode_field_day(message);
             break;
-        case message::message_type::telemetry:
+        case Message::message_type::telemetry:
             encode_telemetry(message);
             break;
-        case message::message_type::euvhf: // encoded same way as standard
+        case Message::message_type::euvhf: // encoded same way as standard
             encode_standard(message);
             break;
-        case message::message_type::unknown:
+        case Message::message_type::unknown:
             d_logger.error("no message");
             break;
-        case message::message_type::rtty_ru:
+        case Message::message_type::rtty_ru:
             encode_rtty_ru(message);
             break;
-        case message::message_type::nonstd_call:
+        case Message::message_type::nonstd_call:
             encode_nonstd_call(message);
             break;
-        case message::message_type::euvhfx:
+        case Message::message_type::euvhfx:
             encode_euvhfx(message);
             break;
-        case message::message_type::free_text:
+        case Message::message_type::free_text:
             encode_free_text(message);
             break;
     }
 }
 
-std::vector<int> ft8_encoder::bits_to_fsk8(const std::bitset<174>& ldpc_bits) {
+std::vector<int> Encode::bits_to_fsk8(const std::bitset<174>& ldpc_bits) {
     // from table in docs
     const int gray_map[8] = {0 /*000*/, 1 /*001*/, 3 /*010*/, 2 /*011*/,
-                             7 /*111*/, 6 /*110*/, 4 /*100*/, 5 /*101*/};
+                             5 /*101*/, 6 /*110*/, 4 /*100*/, 7 /*111*/};
     std::vector<int> symbols;
     symbols.reserve(58); // (174/3 = 58)
 
@@ -95,22 +93,11 @@ std::vector<int> ft8_encoder::bits_to_fsk8(const std::bitset<174>& ldpc_bits) {
     transmit_symbols.insert(transmit_symbols.end(), Mb.begin(), Mb.end());
     transmit_symbols.insert(transmit_symbols.end(), S.begin(), S.end());
 
-    /*std::vector<bool> result;
-    result.reserve(transmit_symbols.size() * 3);
-
-    for (int symbol: transmit_symbols) {
-        result.push_back((symbol >> 2) & 1);
-        result.push_back((symbol >> 1) & 1);
-        result.push_back(symbol & 1);
-    }
-
-    return result;*/
-
     return transmit_symbols;
 }
 
-std::bitset<174> ft8_encoder::apply_ldpc(const std::bitset<91>& crc_bits) {
-    auto generator = load_generator_matrix("generator.dat");
+std::bitset<174> Encode::apply_ldpc(const std::bitset<91>& crc_bits) {
+    auto generator = load_generator_matrix();
     std::bitset<174> complete_msg;
 
     for (int i = 0; i < 91; i++) {
@@ -129,100 +116,107 @@ std::bitset<174> ft8_encoder::apply_ldpc(const std::bitset<91>& crc_bits) {
     return complete_msg;
 }
 
-std::vector<std::bitset<91>> ft8_encoder::load_generator_matrix(const std::string& filename) {
-    std::ifstream file(filename);
-    if (!file.is_open()) {
-        d_logger.error("Cannot open file for generator: {} ", filename);
-    }
-
+std::vector<std::bitset<91>> Encode::load_generator_matrix() {
+    // Hex strings representing the 83x91 generator matrixi
     std::vector<std::bitset<91>> generator_matrix;
     generator_matrix.reserve(83);
-
-    std::string line;
-    int row = 0;
-
-    while (std::getline(file, line) && row < 83) {
-        if (line.empty())
-            continue;
-        if (line.length() >= 91) {
-            bool is_binary_line = true;
-            for (int i = 0; i < 91 && is_binary_line; i++) {
-                if (line[i] != '0' && line[i] != '1') {
-                    is_binary_line = false;
-                }
+    
+    for (int i = 0; i < 83; i++) {
+        std::bitset<91> m_row;
+        const char* hex_str = GENERATOR_HEX[i];
+        
+        // Process 23 hex characters (but only use 91 bits total)
+        for (int j = 0; j < 23; j++) {
+            char c = hex_str[j];
+            int istr;
+            
+            // Convert hex character to integer
+            if (c >= '0' && c <= '9') {
+                istr = c - '0';
+            } else if (c >= 'a' && c <= 'f') {
+                istr = c - 'a' + 10;
+            } else if (c >= 'A' && c <= 'F') {
+                istr = c - 'A' + 10;
+            } else {
+                continue;
             }
-
-            if (is_binary_line) {
-                std::bitset<91> m_row;
-                for (int col = 0; col < 91; col++) {
-                    m_row[col] = (line[col] == '1');
+            
+            // For the last character (j=22), only use 3 bits
+            int ibmax = (j == 22) ? 3 : 4;
+            
+            // Extract bits: test bit positions 3,2,1,0 (MSB to LSB)
+            for (int jj = 1; jj <= ibmax; jj++) {
+                int icol = j * 4 + jj - 1;  // Convert to 0-indexed
+                if (istr & (1 << (4 - jj))) {  // Test bit (4-jj)
+                    m_row[icol] = 1;
                 }
-                generator_matrix.push_back(m_row);
-                row++;
             }
         }
+        
+        generator_matrix.push_back(m_row);
     }
-
-    if (row != 83) {
-        d_logger.error("Invalid row count, expected 83 rows");
-    }
-
+    
+    d_logger.info("Loaded generator matrix with {} rows", generator_matrix.size());
+    
     return generator_matrix;
 }
 
-std::bitset<91> ft8_encoder::calc_crc(const std::bitset<77>& message_bits) {
+std::bitset<91> Encode::calc_crc(const std::bitset<77>& message_bits) {
     // basically a 14-bit shift register
     // if bits fall of the left edge
     // it trigger the polynomial correction
     // so these other bits in the register are flipped using the XOR
     // it's like a conveyer belt of bits
+    
+    d_logger.info("The input message for this function:");
 
-    constexpr uint16_t crc_polynomial = 0x6757;
-    constexpr uint16_t crc_start_val = 0x0000;
-    constexpr uint16_t crc_14bit_mask = 0x3FFF; // 00 + (1*14)
-    constexpr uint16_t crc_msb_mask = 0x2000;   // only bit 13 set
-
-    uint16_t crc_register = crc_start_val;
-
-    for (size_t i = 0; i < 77; ++i) {          // i = bit index
-        bool input_bit = message_bits[76 - i]; // most significant bit order for ft8
-        bool overflow_bit =
-            (crc_register & crc_msb_mask) !=
-            0; // is bit 13 set to 1 (check before shift left to bit 14 and fall of register)
-
-        crc_register <<= 1;
-        crc_register &= crc_14bit_mask; // keep only 14 bits
-
-        if (input_bit) { // input bit to least significant position (right)
-            crc_register ^= 1;
+    uint16_t polynomial = 0x2757;
+    uint16_t crc = 0;
+    uint16_t mask_top = (uint16_t)(1u << 13);
+    uint16_t mask_crc = ((mask_top << 1) - 1u);
+   
+    for (int i = 0; i < 82; ++i){
+      if (i % 8 == 0){
+        uint8_t byte = 0;
+        for (int j = 0; j < 8 && (i + j) < 77; ++j) {
+            byte |= (message_bits[i + j] << (7-j));
         }
+        crc ^= (byte << (14-8));
+      }
 
-        if (overflow_bit) {
-            crc_register ^= crc_polynomial;
-        }
+      if (crc & mask_top){
+        crc = (crc << 1) ^ polynomial;
+      }
+
+      else {
+        crc = (crc << 1);
+      }
     }
 
-    std::bitset<91> complete_msg;
-    for (size_t i = 0; i < 77; ++i) {
-        complete_msg[i] = message_bits[i];
-    }
-    for (size_t i = 0; i < 14; ++i) {
-        complete_msg[77 + i] = (crc_register >> (14 - i)) & 1; // move to msp + mask w/ 1
-    }
+    crc &= mask_crc;
 
-    d_logger.info("91-bit FT8 msg with CRC14 created");
-    return complete_msg;
+    std::bitset<91> post_crc_msg;
+    for (int i = 0; i < 77; ++i){
+      post_crc_msg[i] = message_bits[i];
+    } 
+    
+    std::bitset<14> crc_bits(crc);
+    for (int i = 0; i < 14; ++i){
+      post_crc_msg[77 + i] = crc_bits[13 - i];
+    } 
+
+    return post_crc_msg;
 }
 
 void pack_bits(std::bitset<77>& bits, int& bit_pos, uint64_t val, int num_bits) {
     if (bit_pos <= 77) {
-        for (int i = num_bits - 1; i >= 0; --i) {
+        for (int i = 0; i < num_bits; ++i) {
             bits[bit_pos++] = (val >> i) & 1;
         }
     }
 }
 
-std::bitset<77> ft8_encoder::encode_euvhfx(const message& message) {
+std::bitset<77> Encode::encode_euvhfx(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint16_t h12 = 0;
     uint32_t h22 = 0;
@@ -260,7 +254,7 @@ std::bitset<77> ft8_encoder::encode_euvhfx(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_free_text(const message& message) {
+std::bitset<77> Encode::encode_free_text(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     std::bitset<71> f71;
     uint8_t n3 = 0;
@@ -271,9 +265,8 @@ std::bitset<77> ft8_encoder::encode_free_text(const message& message) {
     std::bitset<77> message_bits;
     int bit_pos = 0;
 
-    for (int i = 0; i < 71; ++i) { // can't use pack bit because71 bits is larger than 64 bit
-                                   // integer
-        message_bits[bit_pos++] = f71[i];
+    for (int i = 0; i <= 71; ++i) {                                   
+      message_bits[bit_pos++] = f71[i];
     }
 
     pack_bits(message_bits, bit_pos, n3, 3);
@@ -283,7 +276,7 @@ std::bitset<77> ft8_encoder::encode_free_text(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_nonstd_call(const message& message) {
+std::bitset<77> Encode::encode_nonstd_call(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint16_t h12 = 0;
     uint64_t c58 = 0;
@@ -325,7 +318,7 @@ std::bitset<77> ft8_encoder::encode_nonstd_call(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_telemetry(const message& message) {
+std::bitset<77> Encode::encode_telemetry(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint8_t i3 = 0;
 
@@ -381,7 +374,7 @@ std::bitset<77> ft8_encoder::encode_telemetry(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_rtty_ru(const message& message) {
+std::bitset<77> Encode::encode_rtty_ru(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     bool t1 = 0;
     uint32_t c28a = 0, c28b = 0;
@@ -414,7 +407,7 @@ std::bitset<77> ft8_encoder::encode_rtty_ru(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_field_day(const message& message) {
+std::bitset<77> Encode::encode_field_day(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint32_t c28a = 0, c28b = 0;
     bool R1 = 0;
@@ -445,7 +438,7 @@ std::bitset<77> ft8_encoder::encode_field_day(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_dexpedition(const message& message) {
+std::bitset<77> Encode::encode_dexpedition(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint32_t c28a = 0, c28b = 0;
     uint16_t h10 = 0;
@@ -484,7 +477,7 @@ std::bitset<77> ft8_encoder::encode_dexpedition(const message& message) {
     return message_bits;
 }
 
-std::bitset<77> ft8_encoder::encode_standard(const message& message) {
+std::bitset<77> Encode::encode_standard(const Message& message) {
     const auto& parsed_data = message.get_parsed_data();
     uint32_t c28a = 0, c28b = 0;
     bool r1 = 0, R1 = 0;
@@ -513,7 +506,7 @@ std::bitset<77> ft8_encoder::encode_standard(const message& message) {
     return message_bits;
 }
 
-uint16_t ft8_encoder::encode_euvhf_serial(const message::ParsedData& parsed_data) {
+uint16_t Encode::encode_euvhf_serial(const Message::ParsedData& parsed_data) {
     if (parsed_data.contest_info.empty()) {
         return 0;
     }
@@ -528,7 +521,7 @@ uint16_t ft8_encoder::encode_euvhf_serial(const message::ParsedData& parsed_data
     return 0;
 }
 
-uint32_t ft8_encoder::g6_to_25(const message::ParsedData& parsed_data) {
+uint32_t Encode::g6_to_25(const Message::ParsedData& parsed_data) {
     // Look for 6-character grid squares
     for (const auto& grid : parsed_data.grid_squares) {
         if (grid.length() == 6) {
@@ -543,7 +536,7 @@ uint32_t ft8_encoder::g6_to_25(const message::ParsedData& parsed_data) {
     return 0;
 }
 
-uint8_t ft8_encoder::encode_contest_report(const message::ParsedData& parsed_data) {
+uint8_t Encode::encode_contest_report(const Message::ParsedData& parsed_data) {
     if (parsed_data.contest_report.empty()) {
         return 0;
     }
@@ -568,7 +561,7 @@ uint8_t ft8_encoder::encode_contest_report(const message::ParsedData& parsed_dat
     return 0;
 }
 
-uint16_t ft8_encoder::encode_contest_info(const message::ParsedData& parsed_data) {
+uint16_t Encode::encode_contest_info(const Message::ParsedData& parsed_data) {
     if (parsed_data.contest_info.empty()) {
         return 0;
     }
@@ -590,7 +583,7 @@ uint16_t ft8_encoder::encode_contest_info(const message::ParsedData& parsed_data
     return 0;
 }
 
-uint32_t ft8_encoder::encode_28(const message::ParsedData& parsed_data, size_t& callsign_idx) {
+uint32_t Encode::encode_28(const Message::ParsedData& parsed_data, size_t& callsign_idx) {
     if (parsed_data.has_de) {
         return 0;
     }
@@ -648,7 +641,7 @@ uint32_t ft8_encoder::encode_28(const message::ParsedData& parsed_data, size_t& 
     return 0;
 }
 
-uint32_t ft8_encoder::std_call_to_28(const std::string& callsign) {
+uint32_t Encode::std_call_to_28(const std::string& callsign) {
     constexpr std::string_view a1 =
         " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // space, numbers, letters
     constexpr std::string_view a2 = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // numbers, letters
@@ -680,7 +673,7 @@ uint32_t ft8_encoder::std_call_to_28(const std::string& callsign) {
     return n28;
 }
 
-std::array<uint32_t, 3> ft8_encoder::string_to_hash(const std::string& string) {
+std::array<uint32_t, 3> Encode::string_to_hash(const std::string& string) {
     constexpr std::string_view c = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"; // base 38
     constexpr uint64_t prime = 4705583345958ULL;
     constexpr std::array<int, 3> nbits = {10, 12, 22};
@@ -712,14 +705,14 @@ std::array<uint32_t, 3> ft8_encoder::string_to_hash(const std::string& string) {
     return {hash_vals[0], hash_vals[1], h22_biased};
 }
 
-uint8_t ft8_encoder::encode_arrl_section(const message::ParsedData& parsed_data) {
+uint8_t Encode::encode_arrl_section(const Message::ParsedData& parsed_data) {
     if (parsed_data.arrl_section >= 0) {
         return static_cast<uint8_t>(parsed_data.arrl_section);
     }
     return 0;
 }
 
-uint64_t ft8_encoder::nonstd_to_58(const message::ParsedData& parsed_data) {
+uint64_t Encode::nonstd_to_58(const Message::ParsedData& parsed_data) {
     constexpr std::string_view a = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ/";
     uint64_t n58 = 0;
 
@@ -753,7 +746,7 @@ uint64_t ft8_encoder::nonstd_to_58(const message::ParsedData& parsed_data) {
     return n58;
 }
 
-std::bitset<71> ft8_encoder::free_text_to_f71(const message::ParsedData& parsed_data) {
+std::bitset<71> Encode::free_text_to_f71(const Message::ParsedData& parsed_data) {
     constexpr std::string_view a = " 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ+-./?";
 
     std::string temp_msg = parsed_data.free_text;
@@ -773,7 +766,7 @@ std::bitset<71> ft8_encoder::free_text_to_f71(const message::ParsedData& parsed_
     std::bitset<71> bits;
 
     for (size_t i = 0; i < 71; ++i) {
-        bits[i] = mpz_tstbit(value.get_mpz_t(), i);
+        bits[70 - i] = mpz_tstbit(value.get_mpz_t(), i); //MSB first
     }
 
     return bits;
@@ -781,7 +774,7 @@ std::bitset<71> ft8_encoder::free_text_to_f71(const message::ParsedData& parsed_
 // in original protocol RRR, RR73, and 73 are also encoded here, removed
 // because it is redundant
 
-uint16_t ft8_encoder::g4_to_15(const message::ParsedData& parsed_data) {
+uint16_t Encode::g4_to_15(const Message::ParsedData& parsed_data) {
     if (!parsed_data.grid_squares.empty()) {
         const std::string& grid = parsed_data.grid_squares[0];
         return (grid[0] - 'A') * 18 * 10 * 10 + (grid[1] - 'A') * 10 * 10 + (grid[2] - '0') * 10 +
@@ -790,7 +783,7 @@ uint16_t ft8_encoder::g4_to_15(const message::ParsedData& parsed_data) {
     return 0;
 }
 
-uint8_t ft8_encoder::encode_fdclass(const message::ParsedData& parsed_data) {
+uint8_t Encode::encode_fdclass(const Message::ParsedData& parsed_data) {
     if (!parsed_data.field_day_class.empty()) {
         char fd_class = parsed_data.field_day_class.back(); // Last character
         if (fd_class >= 'A' && fd_class <= 'F') {
@@ -800,7 +793,7 @@ uint8_t ft8_encoder::encode_fdclass(const message::ParsedData& parsed_data) {
     return 0;
 }
 
-uint8_t ft8_encoder::encode_r2(const message::ParsedData& parsed_data) {
+uint8_t Encode::encode_r2(const Message::ParsedData& parsed_data) {
     if (parsed_data.has_rrr)
         return 1;
     if (parsed_data.has_rr73)
@@ -810,7 +803,7 @@ uint8_t ft8_encoder::encode_r2(const message::ParsedData& parsed_data) {
     return 0;
 }
 
-uint8_t ft8_encoder::encode_sigreport(const message::ParsedData& parsed_data) {
+uint8_t Encode::encode_sigreport(const Message::ParsedData& parsed_data) {
     if (parsed_data.signal_report.empty()) {
         return 0;
     }

@@ -7,12 +7,11 @@
 
 #include "message.h"
 #include <cctype>
-#include <map>
-#include <regex>
 #include <sstream>
+#include <regex>
 
 // from original doc's .txt list
-const std::vector<std::string> message::sections = {
+const std::vector<std::string> Message::sections = {
     "AB",  "AK",  "AL",  "AR",  "AZ",  "BC",  "CO",  "CT",  "DE",  "EB",  "EMA", "ENY",
     "EPA", "EWA", "GA",  "GTA", "IA",  "ID",  "IL",  "IN",  "KS",  "KY",  "LA",  "LAX",
     "MAR", "MB",  "MDC", "ME",  "MI",  "MN",  "MO",  "MS",  "MT",  "NC",  "ND",  "NE",
@@ -21,32 +20,32 @@ const std::vector<std::string> message::sections = {
     "SD",  "SDG", "SF",  "SFL", "SJV", "SK",  "SNJ", "STX", "SV",  "TN",  "UT",  "VA",
     "VI",  "VT",  "WCF", "WI",  "WMA", "WNY", "WPA", "WTX", "WV",  "WWA", "WY",  "DX"};
 
-const std::vector<std::string> message::states_provinces = {
+const std::vector<std::string> Message::states_provinces = {
     "AL", "AK", "AZ", "AR", "CA", "CO", "CT",  "DE", "FL", "GA", "HI", "ID",  "IL",
     "IN", "IA", "KS", "KY", "LA", "ME", "MD",  "MA", "MI", "MN", "MS", "MO",  "MT",
     "NE", "NV", "NH", "NJ", "NM", "NY", "NC",  "ND", "OH", "OK", "OR", "PA",  "RI",
     "SC", "SD", "TN", "TX", "UT", "VT", "VA",  "WA", "WV", "WI", "WY", "NB",  "NS",
     "QC", "ON", "MB", "SK", "AB", "BC", "NWT", "NF", "LB", "NU", "YT", "PEI", "DC"};
 
-message::message() : d_logger("FT8_message") {
+Message::Message() : d_logger("Message_Parsing") {
     d_logger.info("Message object constructed");
 }
-message::message(const std::string& message) : d_logger("FT8_Message") {
+Message::Message(const std::string& message) : d_logger("Message_Parsing") {
     d_logger.info("Message object constructed, message '{}'", message);
     parse_message(message);
 }
 
-void message::parse_message(const std::string& message) {
+void Message::parse_message(const std::string& message) {
     d_message = message;
     preprocess_message();
 }
-void message::preprocess_message() {
+void Message::preprocess_message() {
     input_validation();
     message_type_detection();
     d_logger.info("Preprocessed message: {}", d_message);
 }
 
-void message::input_validation() {
+void Message::input_validation() {
     if (d_message.empty()) {
         d_logger.error("No message input");
         return;
@@ -56,7 +55,7 @@ void message::input_validation() {
     character_validation();
 }
 
-void message::trim()
+void Message::trim()
 // remove leading and trailing whitespace
 {
     size_t start = 0;
@@ -72,7 +71,7 @@ void message::trim()
     d_message = d_message.substr(start, end - start);
 }
 
-void message::character_validation()
+void Message::character_validation()
 // only A-Z, 0-9, and / is allowed, no more than one consecutive space
 {
     size_t i = 0;
@@ -98,7 +97,7 @@ void message::character_validation()
     d_message.resize(i);
 }
 
-message::message_type message::message_type_detection() const {
+Message::message_type Message::message_type_detection() const {
     std::istringstream stream(d_message);
     std::string input;
     std::vector<std::string> keywords;
@@ -189,20 +188,20 @@ message::message_type message::message_type_detection() const {
     return current_type;
 }
 
-bool message::is_arrl_section(const std::string& keyword) const {
-    return std::find(message::sections.begin(), message::sections.end(), keyword) !=
-           message::sections.end();
+bool Message::is_arrl_section(const std::string& keyword) const {
+    return std::find(Message::sections.begin(), Message::sections.end(), keyword) !=
+           Message::sections.end();
 }
 
-int message::get_arrl_section_idx(const std::string& keyword) const {
-    auto val = std::find(message::sections.begin(), message::sections.end(), keyword);
+int Message::get_arrl_section_idx(const std::string& keyword) const {
+    auto val = std::find(Message::sections.begin(), Message::sections.end(), keyword);
     if (val != sections.end()) {
-        return std::distance(message::sections.begin(), val);
+        return std::distance(Message::sections.begin(), val);
     }
     return -1; // Not found
 }
 
-bool message::is_nonstd(const std::vector<std::string>& keywords) const {
+bool Message::is_nonstd(const std::vector<std::string>& keywords) const {
     bool has_nonstd = false;
     for (const auto& keyword : keywords) {
         if (is_nonstd_callsign(keyword)) {
@@ -212,7 +211,7 @@ bool message::is_nonstd(const std::vector<std::string>& keywords) const {
     return has_nonstd;
 }
 
-bool message::is_euvhfx(const std::vector<std::string>& keywords) const {
+bool Message::is_euvhfx(const std::vector<std::string>& keywords) const {
     bool has_callsigns = false;
     bool has_extended_grid = false;
 
@@ -226,7 +225,7 @@ bool message::is_euvhfx(const std::vector<std::string>& keywords) const {
     return has_callsigns && has_extended_grid;
 }
 
-bool message::is_contest_report(const std::string& keyword) const {
+bool Message::is_contest_report(const std::string& keyword) const {
     if (keyword.length() == 2) {
         std::regex two_digit(R"(^5[2-9]$)");
         return std::regex_match(keyword, two_digit);
@@ -237,12 +236,12 @@ bool message::is_contest_report(const std::string& keyword) const {
     return false;
 }
 
-bool message::is_state_province(const std::string& keyword) const {
+bool Message::is_state_province(const std::string& keyword) const {
     return std::find(states_provinces.begin(), states_provinces.end(), keyword) !=
            states_provinces.end();
 }
 
-int message::get_state_province_idx(const std::string& keyword) const {
+int Message::get_state_province_idx(const std::string& keyword) const {
     auto it = std::find(states_provinces.begin(), states_provinces.end(), keyword);
     if (it != states_provinces.end()) {
         return std::distance(states_provinces.begin(), it);
@@ -250,7 +249,7 @@ int message::get_state_province_idx(const std::string& keyword) const {
     return -1;
 }
 
-bool message::is_rtty_ru(const std::vector<std::string>& keywords) const {
+bool Message::is_rtty_ru(const std::vector<std::string>& keywords) const {
     bool has_callsigns = false;
     bool has_contest_data = false;
 
@@ -265,12 +264,12 @@ bool message::is_rtty_ru(const std::vector<std::string>& keywords) const {
     return has_callsigns && has_contest_data;
 }
 
-bool message::is_contest(const std::string& keyword) const {
+bool Message::is_contest(const std::string& keyword) const {
     std::regex contest(R"(^[0-9]{3}$)");
     return std::regex_match(keyword, contest);
 }
 
-bool message::is_std(const std::vector<std::string>& keywords) const {
+bool Message::is_std(const std::vector<std::string>& keywords) const {
     bool has_callsigns = false;
     bool has_grid = false;
 
@@ -285,7 +284,7 @@ bool message::is_std(const std::vector<std::string>& keywords) const {
     return has_callsigns && has_grid;
 }
 
-bool message::is_field_day(const std::vector<std::string>& keywords, bool check_r) const {
+bool Message::is_field_day(const std::vector<std::string>& keywords, bool check_r) const {
     bool has_callsigns = false;
     bool has_field_day_class = false;
     bool has_r = false;
@@ -309,19 +308,19 @@ bool message::is_field_day(const std::vector<std::string>& keywords, bool check_
     return true;
 }
 
-bool message::is_field_day_class(const std::string& keyword) const {
+bool Message::is_field_day_class(const std::string& keyword) const {
     std::regex fdclass(R"(^\d+[ABCDEF]$)");
     return std::regex_match(keyword, fdclass);
 }
 
-bool message::is_telemetry(const std::vector<std::string>& keywords) const {
+bool Message::is_telemetry(const std::vector<std::string>& keywords) const {
     if (keywords.size() == 1 && is_hex(keywords[0])) {
         return true;
     }
     return false;
 }
 
-bool message::is_hex(const std::string& keyword) const {
+bool Message::is_hex(const std::string& keyword) const {
     for (char c : keyword) {
         if (!std::isxdigit(c))
             return false;
@@ -329,7 +328,7 @@ bool message::is_hex(const std::string& keyword) const {
     return true;
 }
 
-bool message::is_dxpedition(const std::vector<std::string>& keywords) const {
+bool Message::is_dxpedition(const std::vector<std::string>& keywords) const {
     for (const auto& keyword : keywords) {
         if (keyword == "RRR" || keyword == "RR73" || keyword == "73" || is_signal_report(keyword)) {
             return true;
@@ -340,7 +339,7 @@ bool message::is_dxpedition(const std::vector<std::string>& keywords) const {
     return false;
 }
 
-bool message::is_signal_report(const std::string& keyword) const {
+bool Message::is_signal_report(const std::string& keyword) const {
     //+-nn
     if (keyword.size() == 3) {
         static const std::regex sreport(R"(^[+-]\d{2}$)");
@@ -349,7 +348,7 @@ bool message::is_signal_report(const std::string& keyword) const {
     return false;
 }
 
-bool message::is_callsign(const std::string& keyword) const {
+bool Message::is_callsign(const std::string& keyword) const {
     // one-two character prefix, at least one is a letter
     // then a decimal digit, and a suffix up to three letters
 
@@ -358,18 +357,18 @@ bool message::is_callsign(const std::string& keyword) const {
     return std::regex_match(keyword, callsign);
 }
 
-bool message::is_nonstd_callsign(const std::string& keyword) const {
+bool Message::is_nonstd_callsign(const std::string& keyword) const {
     static const std::regex prefix(R"(^[A-Z0-9]{2,4}/[A-Z0-9]{1,2}[A-Z]{1,3}$)");
     static const std::regex suffix(R"(^[A-Z0-9]{1,2}[0-9][A-Z]{1,3}/[A-Z0-9]{2,}$)");
     return std::regex_match(keyword, prefix) || std::regex_match(keyword, suffix);
 }
 
-bool message::is_grid_square(const std::string& keyword) const {
+bool Message::is_grid_square(const std::string& keyword) const {
     std::regex grid(R"(^[A-R]{2}[0-9]{2}$)");
     return std::regex_match(keyword, grid);
 }
 
-bool message::is_grid_6square(const std::string& keyword) const {
+bool Message::is_grid_6square(const std::string& keyword) const {
     std::regex grid(R"(^[A-R]{2}[0-9]{2}[A-X]{2}$)");
     return std::regex_match(keyword, grid);
 }

@@ -9,23 +9,19 @@
 #define INCLUDED_FT8_MESSAGE_PROD_IMPL_H
 
 #include <gnuradio/ft8/message_prod.h>
-#include <string>
 
 namespace gr {
   namespace ft8 {
 
-    class message_prod_impl : public message_prod
+    class Generate_message : public message_prod
     {
      private:
 
      public:
-      message_prod_impl();
-      ~message_prod_impl();
+      Generate_message();
+      ~Generate_message();
 
-      std::vector<float> fsk_tones(std::vector<int> symbols);
       void process_input(const pmt::pmt_t& msg);
-      float generate_gaussian_pulse_taps(float t);
-      std::vector<float> convolve(const std::vector<float>& signal, const std::vector<float>& filter);
     };
 
   } // namespace ft8

@@ -18,8 +18,7 @@
 #include <gnuradio/pdu/pdu_to_stream.h>
 #include <boost/test/unit_test.hpp>
 #include <gnuradio/logger.h>
-#include <fstream>
-#include <filesystem>
+
 #include <sys/stat.h>
 #include <pmt/pmt.h>
 #include <chrono>
@@ -28,127 +27,33 @@
 #include <bitset>
 #include <boost/test/unit_test.hpp>
 #include <cmath>
-#include <complex>
-#include <fstream>
-#include <iostream>
-#include <sstream>
+
 #include <vector>
-#include "ft8_encoder.h"
+#include "encode.h"
 #include "message.h"
+#include "signal.h"
 #include <gnuradio/ft8/encoder.h>
 
-static gr::logger test_logger("FT8_QA");
+static gr::logger test_logger("QA");
 
-
-std::vector<std::vector<int>> 
-load_parity_check_matrix(const std::string& filename) {
-    std::vector<std::vector<int>> H(83, std::vector<int>(174, 0));
-    std::ifstream file(filename);
-
-    if (!file.is_open()) {
-        test_logger.error("Cannot open parity check file: {}", filename);
-        return H;
-    }
-
-    std::string line;
-    int col = 0;
-
-    while (std::getline(file, line) && col < 174) {
-        // Skip empty lines and comments
-        if (line.empty() || line.find("file specifies") != std::string::npos ||
-            line.find("matrix") != std::string::npos || line.find("ones") != std::string::npos) {
-            continue;
-        }
-
-        std::istringstream iss(line);
-        std::vector<int> row_indices;
-        int index;
-
-        // Parse up to 3 integers from the line
-        while (iss >> index && row_indices.size() < 3) {
-            row_indices.push_back(index);
-        }
-
-        if (row_indices.size() == 3) {
-            for (int idx : row_indices) {
-                int row = idx - 1;
-                if (row >= 0 && row < 83) {
-                    H[row][col] = 1;
-                }
-            }
-            col++;
-        }
-    }
-
-    test_logger.info("Loaded parity check matrix: {} columns processed", col);
-    return H;
-}
-
-std::vector<float> 
-generate_gaussian_pulse_taps(int samples_per_symbol, float bt) {
-    int pulse_len = 3 * samples_per_symbol;
-    std::vector<float> pulse(pulse_len);
-    
-    // Gaussian pulse equation: p(t) = (1/2T) * [erf(kBT(t+0.5)/T) - erf(kBT(t-0.5)/T)]
-    float k = M_PI *std::sqrt(2.0f / std::log(2.0f));
-    float erf_coeff = k * bt;
-    float T = 0.160;
-    float norm = 1/(2*T); 
-
-    for (int i = 0; i < pulse_len; ++i) {
-        float t = (i - pulse_len/2.0f)/samples_per_symbol; //center it
-        float erf_plus = std::erf(erf_coeff * (t/T + 0.5f));
-        float erf_minus = std::erf(erf_coeff * (t/T - 0.5f));
-        pulse[i] = norm * (erf_plus - erf_minus);
-    }
-    
-    return pulse;
-}
-
-//to figure out what the time value ranging from 0 to 7680 does to erf function
-//also to ensure the standard erf function works as advertised
-// BOOST_AUTO_TEST_CASE(erf_test){ 
-//     //p(t) = (1/2T) * [erf(kBT(t+0.5)/T) - erf(kBT(t-0.5)/T)]
-//     int num_tests = 9;
-//     std::vector<float> vals_to_test(num_tests);
-
-//     vals_to_test = {0,0.25,0.5,1,5,10,100,1000,7000};
-//     float k = 5.366f;
-//     int bT = 2;
-//     float T = 0.160f;
-
-//     for (int i = 0; i<num_tests; ++i){ //make better printing
-//         float val_in = k*bT*(vals_to_test[i]/T+0.5);
-//         std::cout << "vals to test:" << std::endl;
-//         std::cout << vals_to_test[i] <<std::endl;
-//         std::cout << "val in:" << std::endl;
-//         std::cout << val_in << std::endl;
-//         std::cout << "erf val in" << std::endl;
-//         std::cout << std::erf(val_in) << std::endl;
-//         std::cout << "final value:" << std::endl;
-//         std::cout << 1/(2*T)*std::erf(val_in) << std::endl;
-//         std::cout << std::endl;
-//     }
-// }
-
-BOOST_AUTO_TEST_CASE(test_message_prod_basic)
+BOOST_AUTO_TEST_CASE(test_message_prod)
 {
     auto tb = gr::make_top_block("test_ft8_message_prod");
 
-    pmt::pmt_t test_message = pmt::string_to_symbol("TNX BOB 73 GL");
+    pmt::pmt_t test_message = pmt::string_to_symbol("TADISAWESOME");
 
     auto msg_strobe = gr::blocks::message_strobe::make(
         test_message, 
         1000
     );
+
     //https://wiki.gnuradio.org/index.php/Packet_Communications
     auto msg_processor = gr::ft8::message_prod::make();
-    // auto msg_debug = gr::blocks::message_debug::make();
     auto pdu_to_stream = gr::pdu::pdu_to_stream_f::make(
         gr::pdu::EARLY_BURST_APPEND      
     );
 
-    const float sample_rate = 48000.0f;
+    const float sample_rate = 12000.0f;
 
     auto wav_sink = gr::blocks::wavfile_sink::make(
         "./ft8_signal_updated.wav",
@@ -158,158 +63,160 @@ BOOST_AUTO_TEST_CASE(test_message_prod_basic)
         gr::blocks::FORMAT_PCM_16,          
         false                                  // append (false = overwrite)
     );
-
+    
     tb->msg_connect(msg_strobe, "strobe", msg_processor, "Input");
     tb->msg_connect(msg_processor, "Output", pdu_to_stream, "pdus");
-
-    // tb->connect(pdu_to_stream, 0, gaussian_filter, 0);
     tb->connect(pdu_to_stream, 0, wav_sink, 0);
-
 
     test_logger.info("FT8 chain connected successfully");
 
     tb->start();
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(2));
     tb->stop();
     tb->wait();
+
     test_logger.info("Flowgraph executed successfully");
-
 }
 
-// Function to perform parity check: H × codeword^T = 0
-std::vector<int> perform_parity_check(const std::vector<std::vector<int>>& H,
-                                      const std::bitset<174>& codeword) {
-    std::vector<int> parity_results(83, 0);
-
-    // Matrix multiplication
-    for (int row = 0; row < 83; row++) {
-        int sum = 0;
-        for (int col = 0; col < 174; col++) {
-            if (H[row][col] == 1 && codeword[col] == 1) {
-                sum ^= 1; // XOR operation for GF(2)
-            }
-        }
-        parity_results[row] = sum;
+BOOST_AUTO_TEST_CASE(test_free_text_encoding) {
+    Message msg("TNX BOB 73 GL");
+    Encode encoder;
+    
+    std::bitset<77> message_bits = encoder.encode_free_text(msg);
+   
+        
+    // Print entire 77-bit sequence
+    test_logger.info("Full 77-bit sequence:");
+    std::string bit_string;
+    for (int i = 0; i < 77; i++) {
+      bit_string += (message_bits[i] ? '1' : '0');
+      if ((i + 1) % 8 == 0 && i < 77) bit_string += " ";
     }
+    test_logger.info("{}", bit_string);
 
-    return parity_results;
-}
-
-BOOST_AUTO_TEST_CASE(test_ldpc_parity_check_validation) {
-    test_logger.info("Starting LDPC parity check validation test");
-
-    // Load the parity check matrix
-    auto H = load_parity_check_matrix("parity.dat");
-
-    message msg("CQ K1ABC FN42");
-    ft8_encoder encoder;
-
-    // Encode the complete LDPC codeword
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
+    // Reference: 77-bit payload
+    const uint8_t expected_payload[10] = {
+      0x63, 0xED, 0xCE, 0xE2, 0xA4, 0xAE, 0x07, 0xF5, 0x00, 0x00
+    };
+    // Test 77-bit message
+    for (int byte_idx = 0; byte_idx < 10; byte_idx++) {
+      uint8_t actual_byte = 0;
+      for (int bit = 0; bit < 8; bit++) {
+        int bit_pos = byte_idx * 8 + bit;
+          if (bit_pos < 77) {
+              if (message_bits[bit_pos]) {
+                actual_byte |= (0x80 >> bit);
+              }
+          }
+       }
+     test_logger.info("77-bit Byte {}: expected={:02X}, actual={:02X}", 
+                      byte_idx, expected_payload[byte_idx], actual_byte);
+     BOOST_CHECK_EQUAL(actual_byte, expected_payload[byte_idx]);
+    }
+    
     std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
-    std::bitset<174> ldpc_codeword = encoder.apply_ldpc(crc_bits);
-
-    test_logger.info("Testing message: '{}'", msg.get_message());
-    test_logger.info("77-bit message encoded, CRC applied, LDPC encoded to 174 bits");
-
-    // Perform parity check
-    std::vector<int> parity_results = perform_parity_check(H, ldpc_codeword);
-
-    // Check if parity results is all zeros (valid codeword)
-    bool is_valid = true;
-    int non_zero_count = 0;
-
-    for (int i = 0; i < 83; i++) {
-        if (parity_results[i] != 0) {
-            is_valid = false;
-            non_zero_count++;
-        }
+    
+    test_logger.info("=== Testing 14-bit CRC ===");
+    
+    // Print entire 91-bit sequence
+    bit_string = "";
+    test_logger.info("Full 91-bit sequence:");
+    for (int i = 0; i < 91; i++) {
+      bit_string += (crc_bits[i] ? '1' : '0');
+      if ((i + 1) % 8 == 0 && i < 90) bit_string += " ";
+    }
+    test_logger.info("{}", bit_string);
+    
+    // Expected 14-bit CRC:  //from ft8_lib and the official implementation
+    const char* expected_crc_bits = "11111110001011";
+    
+    test_logger.info("Expected CRC (14 bits): {}", expected_crc_bits);
+    
+    std::string actual_crc_bits;
+    for (int i = 77; i < 91; i++) {
+      actual_crc_bits += (crc_bits[i] ? '1' : '0');
+    }
+    test_logger.info("Actual CRC (14 bits):   {}", actual_crc_bits);
+    
+    // Test each CRC bit
+    for (int i = 0; i < 14; i++) {
+      int bit_pos = 77 + i;
+      bool expected = (expected_crc_bits[i] == '1');
+      bool actual = crc_bits[bit_pos];
+      BOOST_CHECK_EQUAL(actual, expected);
+    }
+    
+    const char* expected_ldpc_bits = "011000111110110111001110111000101010010010101110000001111111010100000000000001111111000101110101110011111010000101100110101000111011110110000100000010101111000001010000100010";
+   
+    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
+    for (int i = 0; i < 77; i++) {
+      BOOST_CHECK_EQUAL(ldpc_bits[i], message_bits[i]);  
     }
 
-    test_logger.info("Parity check results:");
-    test_logger.info("- Parity check results length: {}", parity_results.size());
-    test_logger.info("- Non-zero parity check results elements: {}", non_zero_count);
-    test_logger.info("- Codeword valid: {}", is_valid ? "YES" : "NO");
+    for (int i = 77; i < 91; i++) {
+      BOOST_CHECK_EQUAL(ldpc_bits[i], crc_bits[i]); 
+    }
 
-    BOOST_CHECK_MESSAGE(is_valid, "LDPC parity check failed - parity check results have " +
-                                      std::to_string(non_zero_count) + " non-zero elements");
+    std::string expected_str = expected_ldpc_bits;
+    
+    std::string actual_str;
+    for (int i = 0; i < 174; ++i) {  
+      actual_str += ldpc_bits[i] ? '1' : '0';
+    }
+    
+    test_logger.info("{}", actual_str);
+    
+//    // Print comparison
+//    for (size_t i = 0; i < expected_str.length(); i += 8) {
+//      size_t chunk_size = std::min(size_t(8), expected_str.length() - i);
+//      std::string expected_chunk = expected_str.substr(i, chunk_size);
+//      std::string actual_chunk = actual_str.substr(i, chunk_size);
+//      
+//      test_logger.info("e: {}", expected_chunk);
+//      test_logger.info("a: {}", actual_chunk);
+//      test_logger.info("");  
+//    }
+    
+    bit_string = "";
+    test_logger.info("Full 83 parity bits:");
+    for (int i = 91; i < 174; i++) {
+      bit_string += (ldpc_bits[i] ? '1' : '0');
+      if ((i + 1) % 8 == 0 && i < 174) bit_string += " ";
+    }
+    test_logger.info("{}", bit_string);
+
+    for (int i = 0; i < 174; ++i) {
+      bool expected = (expected_ldpc_bits[i] == '1');
+      bool actual = ldpc_bits[i];
+      BOOST_CHECK_EQUAL(actual, expected);
+    }
+    
+    const char* expected_symbol_seq = "3140652207447147063336401773500017703140652646427306546072440503670130533140652";
+    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
+    
+    for (int i = 0; i < 79; ++i){
+      BOOST_CHECK_EQUAL(expected_symbol_seq[i] - '0', symbols[i]);
+    }
 }
 
-BOOST_AUTO_TEST_CASE(test_basic_message_encoding) {
-    message msg("CQ K1ABC FN42");
-    ft8_encoder encoder;
+BOOST_AUTO_TEST_CASE(test_sample_generation) {
+    Message msg("TNX BOB 73 GL");
+    Encode encoder;
+    Signal sig_generator;
 
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
-    BOOST_CHECK_EQUAL(message_bits.size(), 77);
-
-    bool has_bits_set = false;
-    for (size_t i = 0; i < 77; ++i) {
-        if (message_bits[i]) {
-            has_bits_set = true;
-            break;
-        }
-    }
-    BOOST_CHECK(has_bits_set);
-
-    test_logger.debug("Basic message encoding test passed");
-}
-
-BOOST_AUTO_TEST_CASE(test_crc_calculation) {
-    message msg("CQ K1ABC FN42");
-    ft8_encoder encoder;
-
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
-    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
-
-    BOOST_CHECK_EQUAL(crc_bits.size(), 91);
-
-    for (size_t i = 0; i < 77; ++i) {
-        BOOST_CHECK_EQUAL(message_bits[i], crc_bits[i]);
-    }
-
-    bool has_crc_bits = false;
-    for (size_t i = 77; i < 91; ++i) {
-        if (crc_bits[i]) {
-            has_crc_bits = true;
-            break;
-        }
-    }
-    BOOST_CHECK(has_crc_bits);
-
-    test_logger.debug("CRC calculation test passed");
-}
-
-BOOST_AUTO_TEST_CASE(test_ldpc_encoding) {
-    message msg("CQ K1ABC FN42");
-    ft8_encoder encoder;
-
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
+    std::bitset<77> message_bits = encoder.encode_free_text(msg);
     std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
     std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
-
-    BOOST_CHECK_EQUAL(ldpc_bits.size(), 174);
-
-    for (size_t i = 0; i < 91; ++i) {
-        BOOST_CHECK_EQUAL(crc_bits[i], ldpc_bits[i]);
-    }
-
-    bool has_parity_bits = false;
-    for (size_t i = 91; i < 174; ++i) {
-        if (ldpc_bits[i]) {
-            has_parity_bits = true;
-            break;
-        }
-    }
-    BOOST_CHECK(has_parity_bits);
-
-    test_logger.debug("LDPC encoding test passed");
+    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
+    std::vector<float> fsk_tone_vals = sig_generator.fsk_tones(symbols);
+    BOOST_CHECK_EQUAL(fsk_tone_vals.size(), 180000);
 }
 
-BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
-    message msg("CQ K1ABC FN42");
-    ft8_encoder encoder;
+BOOST_AUTO_TEST_CASE(test_symbol_conversion_syncs) {
+    Message msg("TNX BOB 73 GL");
+    Encode encoder;
 
-    std::bitset<77> message_bits = encoder.encode_standard(msg);
+    std::bitset<77> message_bits = encoder.encode_free_text(msg);
     std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
     std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
     std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
@@ -357,7 +264,6 @@ BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
     }
     test_logger.info("Expected sync:  [{}]", expected_str);
 
-    // Test each sync position separately with detailed error messages
     for (size_t i = 0; i < 7; ++i) {
         // First sync (positions 0-6)
         BOOST_CHECK_MESSAGE(expected_sync[i] == symbols[i],
@@ -380,6 +286,204 @@ BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
 
     test_logger.debug("Symbol conversion test passed - sync patterns correct");
 }
+
+
+    
+//    // Test CRC calculation
+//    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+//    
+//    test_logger.info("=== Testing 91-bit CRC ===");
+//    for (int byte_idx = 0; byte_idx < 12; byte_idx++) {
+//        uint8_t actual_byte = 0;
+//        for (int bit = 0; bit < 8; bit++) {
+//            int bit_pos = byte_idx * 8 + bit;
+//            if (bit_pos < 91) {
+//                if (crc_bits[bit_pos]) {
+//                    actual_byte |= (0x80 >> bit);
+//                }
+//            }
+//        }
+//        test_logger.info("CRC Byte {}: expected={:02X}, actual={:02X}", 
+//                         byte_idx, expected_crc[byte_idx], actual_byte);
+//        BOOST_CHECK_EQUAL(actual_byte, expected_crc[byte_idx]);
+//    }
+//    
+//    // Reference: 174-bit LDPC codeword
+//    const uint8_t expected_ldpc[22] = {
+//        0x62, 0xFF, 0x4F, 0xA2, 0x24, 0xA7, 0x06, 0xD5, 0x80, 0x06, 0xD1,
+//        0x3C, 0xEE, 0xA1, 0x37, 0x82, 0xBF, 0xC6, 0x0A, 0x50, 0x50, 0xC8
+//    };
+//    
+//    // Test LDPC encoding
+//    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
+//    
+//    test_logger.info("=== Testing 174-bit LDPC ===");
+//    for (int byte_idx = 0; byte_idx < 22; byte_idx++) {
+//        uint8_t actual_byte = 0;
+//        for (int bit = 0; bit < 8; bit++) {
+//            int bit_pos = byte_idx * 8 + bit;
+//            if (bit_pos < 174) {
+//                if (ldpc_bits[bit_pos]) {
+//                    actual_byte |= (0x80 >> bit);
+//                }
+//            }
+//        }
+//        test_logger.info("LDPC Byte {}: expected={:02X}, actual={:02X}", 
+//                         byte_idx, expected_ldpc[byte_idx], actual_byte);
+//        BOOST_CHECK_EQUAL(actual_byte, expected_ldpc[byte_idx]);
+//    }
+//    
+//    // Test symbol generation
+//    std::vector<int> symbols = encoder.bits_to_fsk8(ldpc_bits);
+//    
+//    const int expected_symbols[79] = {
+//        3, 1, 4, 0, 6, 5, 2, 2, 0, 7, 4, 4, 7, 1, 4, 7,
+//        0, 6, 3, 3, 3, 6, 4, 0, 1, 7, 7, 3, 5, 0, 0, 0,
+//        1, 7, 7, 0, 3, 1, 4, 0, 6, 5, 2, 6, 4, 6, 4, 2,
+//        7, 3, 0, 6, 5, 4, 6, 0, 7, 2, 4, 4, 0, 5, 0, 3,
+//        6, 7, 0, 1, 3, 0, 5, 3, 3, 1, 4, 0, 6, 5, 2
+//    };
+//    
+//    test_logger.info("=== Testing Symbols ===");
+//    BOOST_REQUIRE_EQUAL(symbols.size(), 79);
+//    for (int i = 0; i < 79; i++) {
+//        if (symbols[i] != expected_symbols[i]) {
+//            test_logger.error("Symbol mismatch at position {}: expected={}, actual={}", 
+//                             i, expected_symbols[i], symbols[i]);
+//        }
+//        BOOST_CHECK_EQUAL(symbols[i], expected_symbols[i]);
+//    }
+
+
+// Function to perform parity check: H × codeword^T = 0
+//std::vector<int> perform_parity_check(const std::vector<std::vector<int>>& H,
+//                                      const std::bitset<174>& codeword) {
+//    std::vector<int> parity_results(83, 0);
+//
+//    // Matrix multiplication
+//    for (int row = 0; row < 83; row++) {
+//        int sum = 0;
+//        for (int col = 0; col < 174; col++) {
+//            if (H[row][col] == 1 && codeword[col] == 1) {
+//                sum ^= 1; // XOR operation for GF(2)
+//            }
+//        }
+//        parity_results[row] = sum;
+//    }
+//
+//    return parity_results;
+//}
+//
+//BOOST_AUTO_TEST_CASE(test_ldpc_parity_check_validation) {
+//    test_logger.info("Starting LDPC parity check validation test");
+//
+//    // Load the parity check matrix
+//    auto H = load_parity_check_matrix("parity.dat");
+//
+//    message msg("TNX BOB 73 GL");
+//    ft8_encoder encoder;
+//
+//    // Encode the complete LDPC codeword
+//    std::bitset<77> message_bits = encoder.encode_free_text(msg);
+//    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+//    std::bitset<174> ldpc_codeword = encoder.apply_ldpc(crc_bits);
+//
+//    test_logger.info("Testing message: '{}'", msg.get_message());
+//    test_logger.info("77-bit message encoded, CRC applied, LDPC encoded to 174 bits");
+//
+//    // Perform parity check
+//    std::vector<int> parity_results = perform_parity_check(H, ldpc_codeword);
+//
+//    // Check if parity results is all zeros (valid codeword)
+//    bool is_valid = true;
+//    int non_zero_count = 0;
+//
+//    for (int i = 0; i < 83; i++) {
+//        if (parity_results[i] != 0) {
+//            is_valid = false;
+//            non_zero_count++;
+//        }
+//    }
+//
+//    test_logger.info("Parity check results:");
+//    test_logger.info("- Parity check results length: {}", parity_results.size());
+//    test_logger.info("- Non-zero parity check results elements: {}", non_zero_count);
+//    test_logger.info("- Codeword valid: {}", is_valid ? "YES" : "NO");
+//
+//    BOOST_CHECK_MESSAGE(is_valid, "LDPC parity check failed - parity check results have " +
+//                                      std::to_string(non_zero_count) + " non-zero elements");
+//}
+//
+//BOOST_AUTO_TEST_CASE(test_basic_message_encoding) {
+//    message msg("TNX BOB 73 GL");
+//    ft8_encoder encoder;
+//
+//    std::bitset<77> message_bits = encoder.encode_free_text(msg);
+//    BOOST_CHECK_EQUAL(message_bits.size(), 77);
+//
+//    bool has_bits_set = false;
+//    for (size_t i = 0; i < 77; ++i) {
+//        if (message_bits[i]) {
+//            has_bits_set = true;
+//            break;
+//        }
+//    }
+//    BOOST_CHECK(has_bits_set);
+//
+//    test_logger.debug("Basic message encoding test passed");
+//}
+//
+//BOOST_AUTO_TEST_CASE(test_crc_calculation) {
+//    message msg("TNX BOB 73 GL");
+//    ft8_encoder encoder;
+//
+//    std::bitset<77> message_bits = encoder.encode_free_text(msg);
+//    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+//
+//    BOOST_CHECK_EQUAL(crc_bits.size(), 91);
+//
+//    for (size_t i = 0; i < 77; ++i) {
+//        BOOST_CHECK_EQUAL(message_bits[i], crc_bits[i]);
+//    }
+//
+//    bool has_crc_bits = false;
+//    for (size_t i = 77; i < 91; ++i) {
+//        if (crc_bits[i]) {
+//            has_crc_bits = true;
+//            break;
+//        }
+//    }
+//    BOOST_CHECK(has_crc_bits);
+//
+//    test_logger.debug("CRC calculation test passed");
+//}
+//
+//BOOST_AUTO_TEST_CASE(test_ldpc_encoding) {
+//    message msg("TNX BOB 73 GL");
+//    ft8_encoder encoder;
+//
+//    std::bitset<77> message_bits = encoder.encode_free_text(msg);
+//    std::bitset<91> crc_bits = encoder.calc_crc(message_bits);
+//    std::bitset<174> ldpc_bits = encoder.apply_ldpc(crc_bits);
+//
+//    BOOST_CHECK_EQUAL(ldpc_bits.size(), 174);
+//
+//    for (size_t i = 0; i < 91; ++i) {
+//        BOOST_CHECK_EQUAL(crc_bits[i], ldpc_bits[i]);
+//    }
+//
+//    bool has_parity_bits = false;
+//    for (size_t i = 91; i < 174; ++i) {
+//        if (ldpc_bits[i]) {
+//            has_parity_bits = true;
+//            break;
+//        }
+//    }
+//    BOOST_CHECK(has_parity_bits);
+//
+//    test_logger.debug("LDPC encoding test passed");
+//}
+
 
 // BOOST_AUTO_TEST_CASE(test_message_type_detection) {
 //     test_logger.info("Testing message type detection");
@@ -513,3 +617,49 @@ BOOST_AUTO_TEST_CASE(test_symbol_conversion) {
     
 //     test_logger.debug("Grid square parsing test passed");
 // }
+////
+//std::vector<std::vector<int>> 
+//load_parity_check_matrix(const std::string& filename) {
+//    std::vector<std::vector<int>> H(83, std::vector<int>(174, 0));
+//    std::ifstream file(filename);
+//
+//    if (!file.is_open()) {
+//        test_logger.error("Cannot open parity check file: {}", filename);
+//        return H;
+//    }
+//
+//    std::string line;
+//    int col = 0;
+//
+//    while (std::getline(file, line) && col < 174) {
+//        // Skip empty lines and comments
+//        if (line.empty() || line.find("file specifies") != std::string::npos ||
+//            line.find("matrix") != std::string::npos || line.find("ones") != std::string::npos) {
+//            continue;
+//        }
+//
+//        std::istringstream iss(line);
+//        std::vector<int> row_indices;
+//        int index;
+//
+//        // Parse up to 3 integers from the line
+//        while (iss >> index && row_indices.size() < 3) {
+//            row_indices.push_back(index);
+//        }
+//
+//        if (row_indices.size() == 3) {
+//            for (int idx : row_indices) {
+//                int row = idx - 1;
+//                if (row >= 0 && row < 83) {
+//                    H[row][col] = 1;
+//                }
+//            }
+//            col++;
+//        }
+//    }
+//
+//    test_logger.info("Loaded parity check matrix: {} columns processed", col);
+//    return H;
+//}
+
+

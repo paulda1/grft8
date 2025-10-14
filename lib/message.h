@@ -17,7 +17,7 @@ namespace gr {
 class logger;
 }
 
-class FT8_API message {
+class FT8_API Message {
    public:
     enum class message_type {
         free_text,   // 0.0
@@ -32,8 +32,8 @@ class FT8_API message {
         unknown
     };
 
-    message();
-    explicit message(const std::string& message);
+    Message();
+    explicit Message(const std::string& message);
 
     void parse_message(const std::string& message);
     message_type message_type_detection() const;

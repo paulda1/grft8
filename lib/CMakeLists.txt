@@ -13,9 +13,9 @@ include(GrPlatform) #define LIB_SUFFIX
 
 list(APPEND ft8_sources
     message.cc
-    ft8_encoder.cc
-    message_prod_impl.cc
-    decoder_impl.cc
+    encode.cc
+    signal.cc
+    generate_message.cc
 )
 
 set(ft8_sources
